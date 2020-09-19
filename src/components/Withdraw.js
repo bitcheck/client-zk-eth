@@ -20,6 +20,7 @@ export default function Withdraw(props) {
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState("USDT");
   const [note, setNote] = useState("");
+  const [hiddenNote, setHiddenNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
 
@@ -58,9 +59,9 @@ export default function Withdraw(props) {
 
   const withdraw = async () => {
     // console.log(withdrawAmount, withdrawAddress, currency);
-    setRunning(true);
     if(!inputValidate()) return;
 
+    setRunning(true);
     // Send to smart contract
     const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
     const url = getUrl();
@@ -108,6 +109,10 @@ export default function Withdraw(props) {
       toast.success("Withdraw amount must be interger.");
       return false;
     }
+    if( note.substring(0, note.length) === ".".repeat(note.length)) {
+      toast.success("Recipient is wrong, DON'T input the recipient manully, just paste it.");
+      return false;
+    }
     return true;
   }
   useEffect(() => {
@@ -135,6 +140,21 @@ export default function Withdraw(props) {
     }
   }
 
+  function handleInput(text){
+      const stars = text.length;
+      setNote(text);
+      setHiddenNote(generateStars(stars));
+      console.log("222 ",text);
+  }
+
+  function generateStars(n){
+      var stars = '';
+      for (var i=0; i<n;i++){
+          stars += '.';
+      }
+      return stars;
+  }
+
   return(
     <div>
       <div className="deposit-background">
@@ -144,8 +164,9 @@ export default function Withdraw(props) {
         <div className="title-bar">
           Withdraw
         </div>
-        <div className="font1">Enter your recipient:</div>
-        <textarea className="recipient-input" onChange={(e) => setNote(e.target.value)}></textarea>
+        <div className="font1">Paste your recipient:</div>
+        <textarea className="recipient-input" onChange={(e) => handleInput(e.target.value)} value={hiddenNote}></textarea>
+        {/* <textarea className="hidden" onChange={(e) => handleInputHidden(e.target.value)} value={note}></textarea> */}
         <div className="recipient-line">
           <div className="key">Deposit Amount</div>
           <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositAmount} {currency}</div>
