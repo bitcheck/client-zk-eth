@@ -11,6 +11,9 @@
 # production
 /build
 
+# compiled circuits
+/public/circuits
+
 # misc
 .DS_Store
 .env.local
