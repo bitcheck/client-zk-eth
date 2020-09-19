@@ -111,6 +111,7 @@ body {
   overflow-y: auto;
   -webkit-user-modify: read-write-plaintext-only;
   word-wrap:break-word;
+  resize: none;
 }
 .recipient-line {
   color: #50BF3E;
