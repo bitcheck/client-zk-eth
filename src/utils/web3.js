@@ -22,6 +22,7 @@ export const getNoteDetails = async (noteKey, note, shaker, lib, account) => {
     from: depositInfo.from, 
     isSpent: depositInfo.isSpent,
     time: depositDate.toLocaleDateString() + " " + depositDate.toLocaleTimeString(),
+    timestamp: depositInfo.timestamp,
     withdrawArray: withdrawData === undefined ? [] : withdrawData.withdrawArray,
     totalWithdraw: withdrawData === undefined ? 0 : withdrawData.totalWithdraw,
     note: note
@@ -91,10 +92,10 @@ export async function loadWithdrawalData({ deposit }, shaker, lib) {
   }
 }
 
-export function comdify(n) {
+export function formatAmount(n, decimals = 2) {
 　　let num = Number(n);
 　　let re = /\d{1,3}(?=(\d{3})+$)/g;
-　　let n1 = num.toFixed(2).replace(/^(\d+)((\.\d+)?)$/, function (s, s1, s2) {
+　　let n1 = num.toFixed(decimals).replace(/^(\d+)((\.\d+)?)$/, function (s, s1, s2) {
 　　　　return s1.replace(re, "$&,") + s2;
 　　});
 　　return n1;

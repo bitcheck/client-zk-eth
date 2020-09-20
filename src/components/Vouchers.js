@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import {ERC20ShakerAddress} from "../config.js";
-import {getNoteDetails} from "../utils/web3.js";
+import {getNoteDetails, formatAmount} from "../utils/web3.js";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faSpinner, faTrash, faFrown} from '@fortawesome/free-solid-svg-icons';
@@ -66,7 +66,7 @@ export default function Vouchers(props) {
       setIsEmpty(true);
     } else {
       // 排序
-      depositArray = depositArray.sort(compareDescSort('time'));
+      depositArray = depositArray.sort(compareDescSort('timestamp'));
       setVouchers(depositArray);
     }
   }
@@ -150,7 +150,7 @@ function Voucher(props) {
       <div className="voucher-item">
         <div className="content">
         {/* <div className="content-line">Voucher No.#{props.id}</div> */}
-        <div className="content-line">Balance <span className="font2">{props.balance}</span> USDT</div>
+        <div className="content-line">Balance <span className="font2">{formatAmount(props.balance, 0)}</span> USDT</div>
         <div className="content-line">Deposited {props.depositAmount} USDT</div>
         <div className="content-line">On {props.time}</div>
         </div>

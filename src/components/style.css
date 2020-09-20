@@ -12,13 +12,12 @@ body {
 .deposit-background {
   width:100%;
   max-height:100%;
-  margin-top: 64px;
+  margin-top: 69px;
 }
 .title-bar {
   color: #50BF3E;
   font-size: 1.5em;
   line-height: 58px;
-  /* margin-top: 18px; */
   position: fixed;
   background-color: #191919;
   border-bottom: 1px solid #50BF3E;

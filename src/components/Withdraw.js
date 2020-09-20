@@ -5,7 +5,7 @@ import { faSpinner, faFrown } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {ERC20ShakerAddress} from "../config.js";
-import {getNoteDetails, toWeiString} from "../utils/web3.js";
+import {getNoteDetails, toWeiString, formatAmount} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
 
 export default function Withdraw(props) {
@@ -188,11 +188,11 @@ export default function Withdraw(props) {
           {/* <textarea className="hidden" onChange={(e) => handleInputHidden(e.target.value)} value={note}></textarea> */}
           <div className="recipient-line">
             <div className="key">Deposit Amount</div>
-            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositAmount} {currency}</div>
+            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : formatAmount(depositAmount, 0)} {currency}</div>
           </div>
           <div className="recipient-line">
             <div className="key">Current Balance</div>
-            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : balance} {currency}</div>
+            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : formatAmount(balance, 0)} {currency}</div>
           </div>
           <div className="recipient-line">
             <div className="key">Deposit Time</div>

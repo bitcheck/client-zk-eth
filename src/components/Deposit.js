@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {toWeiString, long2Short, comdify, formatAccount, getGasPrice} from "../utils/web3";
+import {toWeiString, long2Short, formatAmount, formatAccount, getGasPrice} from "../utils/web3";
 import {getCombination} from "../utils/devide.js";
 import {depositAmounts, decimals} from "../config.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage";
@@ -209,7 +209,7 @@ export default function Deposit(props) {
         </div>
         <div className="recipient-line">
           <div className="key">Balance</div>
-          <div className="value">{comdify(usdtBalance)} USDT</div>
+          <div className="value">{formatAmount(usdtBalance)} USDT</div>
         </div>
         <div className="recipient-line">
           <div className="key">Gas Price</div>
