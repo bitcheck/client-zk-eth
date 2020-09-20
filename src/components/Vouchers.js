@@ -8,7 +8,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import {getNoteStrings, eraseNoteString} from '../utils/localstorage';
-
+import {compareDescSort} from '../utils/array.js';
 import { confirmAlert } from 'react-confirm-alert'; // Import
 import './react-confirm-alert.css'; // Import css
 import "./style.css";
@@ -65,6 +65,8 @@ export default function Vouchers(props) {
       setVouchers([]);
       setIsEmpty(true);
     } else {
+      // 排序
+      depositArray = depositArray.sort(compareDescSort('time'));
       setVouchers(depositArray);
     }
   }
