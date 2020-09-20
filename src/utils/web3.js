@@ -1,5 +1,6 @@
 import {parseNote} from "./zksnark.js";
 import {decimals} from "../config.js";
+const { GasPriceOracle } = require('gas-price-oracle');
 
 export const long2Short = (num, decimals) => {
   return num / Math.pow(10, decimals);
@@ -101,4 +102,11 @@ export function comdify(n) {
 
 export function formatAccount(acc) {
   return acc.substring(0, 10) + "..." + acc.substring(acc.length - 10, acc.length);
+}
+
+export async function getGasPrice() {
+  const defaultRpc = 'https://mainnet.infura.io/v3/3446259cb0e74d68b614f9a10328a368'
+  const oracle = new GasPriceOracle({ defaultRpc });
+   
+  return await oracle.fetchGasPricesOnChain();
 }

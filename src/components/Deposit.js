@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {toWeiString, long2Short, comdify, formatAccount} from "../utils/web3";
+import {toWeiString, long2Short, comdify, formatAccount, getGasPrice} from "../utils/web3";
 import {getCombination} from "../utils/devide.js";
 import {depositAmounts, decimals} from "../config.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage";
@@ -23,6 +23,7 @@ export default function Deposit(props) {
   const [loading, setLoading] = useState(false);
   const [selectStatus, setSelectStatus] = useState(0);
   const [usdtBalance, setUsdtBalance] = useState(0);
+  const [gasPrice, setGasPrice] = useState(0);
 
   const erc20Json = require('../contracts/abi/ERC20.json')
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
@@ -50,10 +51,11 @@ export default function Deposit(props) {
   const init = async () => {
     setLoading(true);
     setIsApproved(await checkAllowance(depositAmount));
-    setLoading(false);
     let usdtBalance = await getERC20Balance(accounts[0]);
     usdtBalance = long2Short(usdtBalance, decimals);
     setUsdtBalance(usdtBalance);
+    setGasPrice(await getGasPrice());
+    setLoading(false);
 }
   const getERC20Balance = async(account) => {
     return await erc20.methods.balanceOf(account).call();
@@ -120,7 +122,7 @@ export default function Deposit(props) {
             <CopyToClipboard text={noteStrings} onCopy={()=>onCopyNoteClick()}>
               <div className='copy-notes-button'>Copy all notes and save</div>
             </CopyToClipboard>
-            <p>Estimated GAS Fee: {gas}</p>
+            <p>Estimated GAS Fee: {(gas * gasPrice * 1.1 / 1e9).toFixed(6)} ETH</p>
             <button className='confirm-button'
               onClick={() => {
                 if(!noteCopied) {
@@ -208,6 +210,10 @@ export default function Deposit(props) {
         <div className="recipient-line">
           <div className="key">Balance</div>
           <div className="value">{comdify(usdtBalance)} USDT</div>
+        </div>
+        <div className="recipient-line">
+          <div className="key">Gas Price</div>
+          <div className="value">{gasPrice} GWei</div>
         </div>
         <div className="font1">Select deposit amount:</div>
         <div className="button-line">

@@ -2796,7 +2796,7 @@ aws4@^1.8.0:
   resolved "https://registry.npm.taobao.org/aws4/download/aws4-1.10.1.tgz#e1e82e4f3e999e2cfd61b161280d16a111f86428"
   integrity sha1-4eguTz6Zniz9YbFhKA0WoRH4ZCg=
 
-axios@^0.19.0:
+axios@^0.19.0, axios@^0.19.2:
   version "0.19.2"
   resolved "https://registry.npm.taobao.org/axios/download/axios-0.19.2.tgz?cache=0&sync_timestamp=1597979608919&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2Faxios%2Fdownload%2Faxios-0.19.2.tgz#3ea36c5d8818d0d5f8a8a97a6d36b86cdc00cb27"
   integrity sha1-PqNsXYgY0NX4qKl6bTa4bNwAyyc=
@@ -6693,6 +6693,14 @@ functional-red-black-tree@^1.0.1:
   version "1.0.1"
   resolved "https://registry.npm.taobao.org/functional-red-black-tree/download/functional-red-black-tree-1.0.1.tgz#1b0ab3bd553b2a0d6399d29c0e3ea0b252078327"
   integrity sha1-GwqzvVU7Kg1jmdKcDj6gslIHgyc=
+
+gas-price-oracle@^0.1.5:
+  version "0.1.5"
+  resolved "https://registry.npm.taobao.org/gas-price-oracle/download/gas-price-oracle-0.1.5.tgz#09dd0d9806465c2f5e63b682e6742f96f6eb525c"
+  integrity sha1-Cd0NmAZGXC9eY7aC5nQvlvbrUlw=
+  dependencies:
+    axios "^0.19.2"
+    bignumber.js "^9.0.0"
 
 gensync@^1.0.0-beta.1:
   version "1.0.0-beta.1"

@@ -68,11 +68,11 @@ body {
 }
 .select-button .usdt {
   display: inline-block;
-  font-size:1em;
+  font-size: 0.9em;
   text-align: left;
   width:30%;
   color: #50BF3E;
-  margin-top: 22px;
+  margin-top: 25px;
   margin-left: 2%;
 }
 .button-selected {
@@ -82,11 +82,11 @@ body {
   width: 90%;
   background-color: #50BF3E;
   color: white;
-  font-size: 1.5em;
-  height: 58px;
+  font-size: 1.2em;
+  height: 54px;
   margin-left: 5%;
   border-radius: 13px;
-  line-height: 58px;
+  line-height: 54px;
   margin-top: 10px;
 }
 .button-connect-wallet {
@@ -326,7 +326,7 @@ body {
 .description {
   color: #50BF3E;
   line-height: 30px;
-  font-size: 18px;
+  font-size: 1.1em;
   margin-left: 10px;
   text-align: left;
 }

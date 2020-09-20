@@ -17,6 +17,7 @@
     "babel-preset-react": "^6.24.1",
     "circom": "^0.0.35",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
+    "gas-price-oracle": "^0.1.5",
     "react": "^16.13.1",
     "react-confirm-alert": "^2.6.2",
     "react-copy-to-clipboard": "^5.0.2",
