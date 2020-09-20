@@ -23,12 +23,14 @@ export default function Deposit(props) {
   const [loading, setLoading] = useState(false);
   const [selectStatus, setSelectStatus] = useState(0);
   const [usdtBalance, setUsdtBalance] = useState(0);
+  const [ethBalance, setEthBalance] = useState(0);
   const [gasPrice, setGasPrice] = useState(0);
 
+  const web3 = lib;
   const erc20Json = require('../contracts/abi/ERC20.json')
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
-  const shaker = new lib.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
-  const erc20 = new lib.eth.Contract(erc20Json, USDTAddress);
+  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
+  const erc20 = new web3.eth.Contract(erc20Json, USDTAddress);
 
   let noteCopied = false;
 
@@ -55,6 +57,7 @@ export default function Deposit(props) {
     usdtBalance = long2Short(usdtBalance, decimals);
     setUsdtBalance(usdtBalance);
     setGasPrice(await getGasPrice());
+    setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
     setLoading(false);
 }
   const getERC20Balance = async(account) => {
@@ -86,7 +89,7 @@ export default function Deposit(props) {
       return;
     }
 
-    const netId = await lib.eth.net.getId();
+    const netId = await web3.eth.net.getId();
     let combination;
     if(selectStatus === 1) {
       combination = getCombination(depositAmount);
@@ -129,6 +132,11 @@ export default function Deposit(props) {
                   toast.success('Please copy all the notes before you continue.');
                   return;
                 }
+                // Check eth for gas is enough?
+                if(gas * gasPrice * 1.1 / 1e9 > parseFloat(ethBalance)) {
+                  toast.success('Your ETH balance is not enough for the GAS Fee');
+                  return;
+                }
                 doDeposit(amounts, commitments, noteStrings, gas); 
                 onClose();
               }}>Continue</button>
@@ -167,6 +175,7 @@ export default function Deposit(props) {
       setLoading(false);
     } catch (err) {
       console.log(err);
+      toast.success("#" + err.code + ", " + err.message);
       // 如果出错，删除刚刚生成的LocalStorage key
       for(let i = 0; i < keys.length; i++) eraseNoteString(keys[i]);
       setLoading(false);
@@ -183,10 +192,11 @@ export default function Deposit(props) {
     // Approve 200000 once to avoid approve amount everytime.
     setLoading(true);
     try {
-      await erc20.methods.approve(ERC20ShakerAddress, lib.utils.toBN(toWeiString(200000))).send({ from: accounts[0], gas: 2e6 })
+      await erc20.methods.approve(ERC20ShakerAddress, web3.utils.toBN(toWeiString(200000))).send({ from: accounts[0], gas: 2e6 })
       setIsApproved(true);
       setLoading(false);  
-    } catch (e) {
+    } catch (err) {
+      toast.success("#" + err.code + ", " + err.message);
       setLoading(false);
     }
   }
@@ -208,8 +218,12 @@ export default function Deposit(props) {
           <div className="value">{formatAccount(accounts[0])}</div>
         </div>
         <div className="recipient-line">
-          <div className="key">Balance</div>
-          <div className="value">{formatAmount(usdtBalance)} USDT</div>
+          <div className="key">ETH Balance</div>
+          <div className="value">{formatAmount(ethBalance, 4)} ETH</div>
+        </div>
+        <div className="recipient-line">
+          <div className="key">USDT Balance</div>
+          <div className="value">{formatAmount(usdtBalance, 2)} USDT</div>
         </div>
         <div className="recipient-line">
           <div className="key">Gas Price</div>

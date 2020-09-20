@@ -18,9 +18,10 @@ export default function Vouchers(props) {
   const {accounts, lib} = web3Context;
   const [vouchers, setVouchers] = useState([]);
   const [isEmpty, setIsEmpty] = useState(false);
+  const web3 = lib;
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
-  const shaker = new lib.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
+  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
 
  const requestAccess = useCallback(() => requestAuth(web3Context), []);
   const requestAuth = async web3Context => {
@@ -57,7 +58,7 @@ export default function Vouchers(props) {
 
     let depositArray = [];
     for (let i = 0; i < noteArray.length; i++) {
-      const noteDetails = await getNoteDetails(noteKeys[i], noteArray[i], shaker, lib);
+      const noteDetails = await getNoteDetails(noteKeys[i], noteArray[i], shaker, web3);
       // console.log(noteKeys[i], noteDetails);
       if(noteDetails !== null) depositArray.push(noteDetails);
     }

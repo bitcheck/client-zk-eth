@@ -11,6 +11,7 @@ import {parseNote, generateProof} from "../utils/zksnark.js";
 export default function Withdraw(props) {
   const {web3Context} = props;
   const {accounts, lib} = web3Context;
+  const web3 = lib;
   const [withdrawAmount, setWithdrawAmount] = useState(0);
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [depositAmount, setDepositAmount] = useState(0);
@@ -24,7 +25,7 @@ export default function Withdraw(props) {
   const [supportWebAssembly, setSupportWebAssembly] = useState(true);
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
-  const shaker = new lib.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
+  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
   let suportWebAssembly = false;
 
   const checkWebAssemblySupport = () => {
@@ -101,6 +102,7 @@ export default function Withdraw(props) {
       await onNoteChange();
       setRunning(false);
     } catch (err) {
+      toast.success("#" + err.code + ", " + err.message);
       setRunning(false);
     }
   }
@@ -141,7 +143,7 @@ export default function Withdraw(props) {
     if(note.substring(0, 11) !== "shaker-usdt") return;
     try {
       setLoading(true);
-      const noteDetails = await getNoteDetails(0, note, shaker, lib, accounts[0]);
+      const noteDetails = await getNoteDetails(0, note, shaker, web3, accounts[0]);
       // console.log(noteDetails);
       // setNote(note);
       setDepositAmount(noteDetails.amount);
