@@ -2,17 +2,10 @@ import {merkleTreeHeight} from "../config.js";
 import merkleTree from "../lib/MerkleTree.js";
 import buildGroth16 from "../lib/groth16_browser";
 import snarkjs from 'snarkjs';
-// const snarkjs = require('snarkjs')
-// import circomlib from 'circomlib';
 const circomlib = require('circomlib')
 const circuit = require('../circuits/withdraw.json')
-// import crypto from 'crypto';
 const crypto = require('crypto')
-// const merkleTree = require('../lib/MerkleTree')
-// const buildGroth16 = require('websnark/src/groth16_browser');//将groth16改成groth16_browser.js，以适用于浏览器（非多线程）
-// import websnarkUtils from websnark/src/utils;
 const websnarkUtils = require('websnark/src/utils')
-// import assert from 'assert';
 const assert = require('assert')
 
 const bigInt = snarkjs.bigInt
@@ -71,16 +64,15 @@ export function createDeposit({ nullifier, secret }) {
  * @param fee Relayer fee
  * @param refund Receive ether for exchanged tokens
  */
-export async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, refund = 0 }, shaker, proving_key) {
+export async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, refund = 0 }, shaker, proving_key, account) {
   // Compute merkle proof of our commitment
-  const { root, path_elements, path_index } = await generateMerkleProof(deposit, shaker)
+  const { root, path_elements, path_index } = await generateMerkleProof(deposit, shaker, account)
   // Prepare circuit input
   // 电路的配置模版见/circuits/withdraw.circom
   const input = {
     // Public snark inputs
     root: root,
     nullifierHash: deposit.nullifierHash,
-    // commitment: deposit.commitmentHex, //######
     recipient: bigInt(recipient),
     relayer: bigInt(relayerAddress),
     fee: bigInt(fee),
@@ -93,12 +85,11 @@ export async function generateProof({ deposit, recipient, relayerAddress = 0, fe
     pathIndices: path_index,
   }
   console.log('Generating SNARK proof')
-  // console.time('Proof time')
+  console.time('Proof time')
   const groth16 = await buildGroth16();
-  console.log("=====10=====")
   const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
   const { proof } = websnarkUtils.toSolidityInput(proofData)
-  // console.timeEnd('Proof time')
+  console.timeEnd('Proof time')
 
   const args = [
     toHex(input.root),
@@ -118,7 +109,7 @@ export async function generateProof({ deposit, recipient, relayerAddress = 0, fe
  * in it and generates merkle proof
  * @param deposit Deposit object
  */
-async function generateMerkleProof(deposit, shaker) {
+async function generateMerkleProof(deposit, shaker, account) {
   // Get all deposit events from smart contract and assemble merkle tree from them
   console.log('Getting current state from shaker contract')
   const events = await shaker.getPastEvents('Deposit', { fromBlock: 0, toBlock: 'latest' })
@@ -135,8 +126,8 @@ async function generateMerkleProof(deposit, shaker) {
 
   // Validate that our data is correct
   const root = await tree.root()
-  const isValidRoot = await shaker.methods.isKnownRoot(toHex(root)).call()
-  const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call()
+  const isValidRoot = await shaker.methods.isKnownRoot(toHex(root)).call({ from: account, gas: 1e6});
+  const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call({ from: account, gas: 1e6});
   assert(isValidRoot === true, 'Merkle tree is corrupted')
   assert(isSpent === false, 'The note is already spent')
   assert(leafIndex >= 0, 'The deposit is not found in the tree')

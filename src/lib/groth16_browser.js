@@ -24,7 +24,7 @@ function delay(ms) {
 // We use the Object.assign approach for the backwards compatibility
 // @params Number wasmInitialMemory 
 async function build(params) {
-    const defaultParams = { wasmInitialMemory: 5000 };
+    const defaultParams = { wasmInitialMemory: 1000 };
     Object.assign(defaultParams, params);
     const groth16 = new Groth16();
 
@@ -34,7 +34,12 @@ async function build(params) {
     groth16.n32 = groth16.n64*2;
     groth16.n8 = groth16.n64*8;
 
-    groth16.memory = new WebAssembly.Memory({initial:defaultParams.wasmInitialMemory});
+    try {
+      groth16.memory = new WebAssembly.Memory({initial:defaultParams.wasmInitialMemory});
+    } catch (err) {
+      console.log(err.message);
+      return;
+    }
     groth16.i32 = new Uint32Array(groth16.memory.buffer);
 
     const wasmModule = await WebAssembly.compile(groth16_wasm.code);
@@ -63,6 +68,7 @@ async function build(params) {
         concurrency = 8;
     }
 
+    console.log('concurrency', concurrency);
     function getOnMsg(i) {
         return function(e) {
             let data;
@@ -84,6 +90,7 @@ async function build(params) {
     }
 
     const initPromises = [];
+    
     for (let i = 0; i < groth16.workers.length; i++) {
         const copyCode = groth16_wasm.code.buffer.slice(0);
         const action = groth16.postAction(i, {
@@ -94,6 +101,8 @@ async function build(params) {
         initPromises.push(action);
     }
     await Promise.all(initPromises);
+    groth16.terminate();
+    // console.log(groth16);
     return groth16;
 }
 
@@ -371,22 +380,11 @@ class Groth16 {
         const pr = this.alloc(32);
         const ps = this.alloc(32);
 
-        // if (inBrowser) {
-            window.crypto.getRandomValues(rnd);
-            this.putBin(pr, rnd);
+        window.crypto.getRandomValues(rnd);
+        this.putBin(pr, rnd);
 
-            window.crypto.getRandomValues(rnd);
-            this.putBin(ps, rnd);
-        // } else {
-        //     const br = NodeCrypto.randomBytes(32);
-        //     this.putBin(pr, br);
-        //     const bs = NodeCrypto.randomBytes(32);
-        //     this.putBin(ps, bs);
-        // }
-
-        /// Uncoment it to debug and check it works
-        //        this.instance.exports.f1m_zero(pr);
-        //        this.instance.exports.f1m_zero(ps);
+        window.crypto.getRandomValues(rnd);
+        this.putBin(ps, rnd);
 
         // pi_a = pi_a + Alfa1 + r*Delta1
         this.instance.exports.g1_add(pAlfa1, pi_a, pi_a);
@@ -437,9 +435,7 @@ class Groth16 {
             pi_b: this.bin2g2(this.getBin(pi_b, 192)),
             pi_c: this.bin2g1(this.getBin(pi_c, 96)),
         };
-
     }
-
 }
 
 // module.exports = build;

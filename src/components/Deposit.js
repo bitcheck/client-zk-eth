@@ -1,15 +1,18 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import "./style.css";
 import {ERC20ShakerAddress, USDTAddress} from "../config.js";
 import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {toWeiString, long2Short} from "../utils/web3";
+import {toWeiString, long2Short, comdify, formatAccount} from "../utils/web3";
 import {getCombination} from "../utils/devide.js";
 import {depositAmounts, decimals} from "../config.js";
-import {saveNoteString} from "../utils/localstorage";
+import {saveNoteString, eraseNoteString} from "../utils/localstorage";
+import {CopyToClipboard} from 'react-copy-to-clipboard';
+import { confirmAlert } from 'react-confirm-alert'; // Import
+import './react-confirm-alert.css'; // Import css
+import "./style.css";
 
 export default function Deposit(props) {
   const {web3Context} = props;
@@ -19,12 +22,14 @@ export default function Deposit(props) {
   const [isApproved, setIsApproved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectStatus, setSelectStatus] = useState(0);
-  
+  const [usdtBalance, setUsdtBalance] = useState(0);
 
   const erc20Json = require('../contracts/abi/ERC20.json')
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
   const shaker = new lib.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
   const erc20 = new lib.eth.Contract(erc20Json, USDTAddress);
+
+  let noteCopied = false;
 
   useEffect(() => {
     if(accounts && accounts.length > 0) {
@@ -46,6 +51,9 @@ export default function Deposit(props) {
     setLoading(true);
     setIsApproved(await checkAllowance(depositAmount));
     setLoading(false);
+    let usdtBalance = await getERC20Balance(accounts[0]);
+    usdtBalance = long2Short(usdtBalance, decimals);
+    setUsdtBalance(usdtBalance);
 }
   const getERC20Balance = async(account) => {
     return await erc20.methods.balanceOf(account).call();
@@ -62,11 +70,9 @@ export default function Deposit(props) {
 
   const deposit = async () => {
     setLoading(true);
-    console.log("divided", selectStatus);
+    noteCopied = false;
     // send to smart comtract
-    let usdtBalance = await getERC20Balance(accounts[0]);
-    usdtBalance = long2Short(usdtBalance, decimals);
-    console.log("USDT Balance", usdtBalance);
+    // console.log("USDT Balance", usdtBalance);
     if(usdtBalance < depositAmount) {
       toast.success("USDT Balance is below deposit");
       setLoading(false);
@@ -85,7 +91,7 @@ export default function Deposit(props) {
     } else {
       combination = [depositAmount];
     }
-    console.log("=======>", combination);
+    // console.log("=======>", combination);
     let noteStrings = [];
     let commitments = [];
     let amounts = [];
@@ -97,18 +103,70 @@ export default function Deposit(props) {
       commitments.push(deposit.commitmentHex);
       amounts.push(toWeiString(combination[i]));
     }
-
-    console.log(amounts, noteStrings, commitments);
+    // console.log(amounts, noteStrings, commitments);
     const gas = await shaker.methods.depositERC20Batch(amounts, commitments).estimateGas({ from: accounts[0], gas: 10e6});
     console.log("Estimate GAS", gas);
+    const noteShortStrings = getNoteShortStrings(noteStrings);
 
+    // 弹出对话框，确认GAS费，拆分方案，与noteString，并要求复制后才能进行下一步
+    // ######
+    confirmAlert({
+      customUI: ({ onClose }) => {
+        return (
+          <div className='confirm-box'>
+            <h1>ATTENSION!!!</h1>
+            <p>Here are voucher notes, you can send them to your reciever or keep with you in safe place. Anybody can use these notes to withdraw the deposit. </p>
+            <div className='note-display'>{noteShortStrings}</div>
+            <CopyToClipboard text={noteStrings} onCopy={()=>onCopyNoteClick()}>
+              <div className='copy-notes-button'>Copy all notes and save</div>
+            </CopyToClipboard>
+            <p>Estimated GAS Fee: {gas}</p>
+            <button className='confirm-button'
+              onClick={() => {
+                if(!noteCopied) {
+                  toast.success('Please copy all the notes before you continue.');
+                  return;
+                }
+                doDeposit(amounts, commitments, noteStrings, gas); 
+                onClose();
+              }}>Continue</button>
+            <button className="cancel-button"
+              onClick={() => {
+                onClose();
+                setLoading(false);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        );
+      }
+    });
+  }
+
+  const onCopyNoteClick = () => {
+    noteCopied = true;
+    toast.success("Notes have been copied, please save it and continue.");
+  }
+  const getNoteShortStrings = (noteStrings) => {
+    let re = [];
+    for(let i = 0; i < noteStrings.length; i++) {
+      re.push(noteStrings[i].substring(0, 40) + '...');
+    }
+    return re;
+  }
+
+  const doDeposit = async(amounts, commitments, noteStrings, gas) => {
+    let keys = [];
     try {
-      await shaker.methods.depositERC20Batch(amounts, commitments).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       // Save to localStorage
-      for(let i = 0; i < noteStrings.length; i++) saveNoteString(accounts[0], noteStrings[i]);
+      for(let i = 0; i < noteStrings.length; i++) keys.push(saveNoteString(accounts[0], noteStrings[i]));
+      await shaker.methods.depositERC20Batch(amounts, commitments).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       setLoading(false);
     } catch (err) {
       console.log(err);
+      // 如果出错，删除刚刚生成的LocalStorage key
+      for(let i = 0; i < keys.length; i++) eraseNoteString(keys[i]);
       setLoading(false);
     }
   }
@@ -143,6 +201,14 @@ export default function Deposit(props) {
         <div className="title-bar">
           Deposit
         </div>
+        <div className="recipient-line">
+          <div className="key">Account</div>
+          <div className="value">{formatAccount(accounts[0])}</div>
+        </div>
+        <div className="recipient-line">
+          <div className="key">Balance</div>
+          <div className="value">{comdify(usdtBalance)} USDT</div>
+        </div>
         <div className="font1">Select deposit amount:</div>
         <div className="button-line">
           <SelectButton id="0" amount={depositAmounts[0]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
@@ -166,22 +232,36 @@ export default function Deposit(props) {
         </div>
 
         {isApproved ? 
-        loading ? <div className="button-deposit unavailable"><FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Please wait...</div> :
+        loading ? 
+        <div>
+          <div className="button-deposit unavailable"><FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Please wait...
+        </div>
+          <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
+        </div> 
+        :
         <div className="button-deposit" onClick={deposit}>Deposit</div>
         :
-        loading ? <div className="button-approve unavailable"><FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Please wait...</div> :
+        loading ? 
+        <div>
+          <div className="button-approve unavailable"><FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Please wait...
+          </div> 
+          <div className="memo">After submiting transaction, you can check the wallet to see the result.
+          </div>
+        </div>
+        :
         <div className="button-approve" onClick={setAllowance}>Approve</div>
         }
-        <SelectSeparate 
+        <SelectBox 
           status={selectStatus}
           description="If divided into 3-5 parts to deposit."
           changeSelectStatus={changeSelectStatus}
         />
+        <div className="empty-gap"></div>
         </div>
         : 
         <div>
-          <div className="connect-wallet">You have not connected to Wallet</div>
-          <div className="button-deposit" onClick={requestAccess}>Connect to wallet</div>
+          {/* <div className="connect-wallet">You have not connected to Wallet</div> */}
+          <div className="button-connect-wallet" onClick={requestAccess}>Connect to wallet</div>
         </div>
       }
       </div>
@@ -189,7 +269,7 @@ export default function Deposit(props) {
   )
 }
 
-export function SelectButton(props) {
+function SelectButton(props) {
   const {amount, side, id, selectedId} = props;
   const [selected, setSelected] = useState(false);
 
@@ -212,7 +292,7 @@ export function SelectButton(props) {
   )
 }
 
-export function SelectSeparate(props) {
+function SelectBox(props) {
   const [status, setStatus] = useState(props.status);
 
   const onClick = () => {
@@ -234,3 +314,4 @@ export function SelectSeparate(props) {
     </div>
   )
 }
+

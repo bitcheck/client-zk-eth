@@ -13,7 +13,9 @@ function getRandomCode(length) {
 }
 
 export const saveNoteString = (account, noteString) => {
-  localStorage[account + "_note_" + getRandomCode(32)] = noteString;
+  const key = account + "_note_" + getRandomCode(32);
+  localStorage[key] = noteString;
+  return key;
 }
 
 export const getNoteStrings = (account) => {

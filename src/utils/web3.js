@@ -5,9 +5,10 @@ export const long2Short = (num, decimals) => {
   return num / Math.pow(10, decimals);
 }
 
-export const getNoteDetails = async (noteKey, note, shaker, lib) => {
+export const getNoteDetails = async (noteKey, note, shaker, lib, account) => {
   const { currency, amount, netId, deposit } = parseNote(note)
   const depositInfo = await loadDepositData({ deposit }, shaker, lib);
+  if(depositInfo === null) return null;
   const depositDate = new Date(depositInfo.timestamp * 1000)
   const withdrawData = await loadWithdrawalData({ deposit }, shaker, lib);
   return({
@@ -25,7 +26,7 @@ export const getNoteDetails = async (noteKey, note, shaker, lib) => {
     note: note
   })
 }
-export async function loadDepositData({ deposit }, shaker, lib) {
+export async function loadDepositData({ deposit }, shaker, lib, account) {
   try {
     const eventWhenHappened = await shaker.getPastEvents('Deposit', {
       filter: {
@@ -35,19 +36,20 @@ export async function loadDepositData({ deposit }, shaker, lib) {
       toBlock: 'latest'
     })
     if (eventWhenHappened.length === 0) {
-      throw new Error('There is no related deposit, the note is invalid')
+      // throw new Error('There is no related deposit, the note is invalid');
+      return null;
     }
 
     const { timestamp } = eventWhenHappened[0].returnValues
     const txHash = eventWhenHappened[0].transactionHash
-    const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call()
+    const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call({ from: account, gas: 1e6})
     const receipt = await lib.eth.getTransactionReceipt(txHash)
 
     return { timestamp, txHash, isSpent, from: receipt.from, commitment: deposit.commitmentHex }
   } catch (e) {
     console.error('loadDepositData', e)
+    return null;
   }
-  return {}
 }
 
 export const toWeiString = num => num + "0".repeat(decimals);//"000000000000000000";
@@ -88,4 +90,15 @@ export async function loadWithdrawalData({ deposit }, shaker, lib) {
   }
 }
 
+export function comdify(n) {
+　　let num = Number(n);
+　　let re = /\d{1,3}(?=(\d{3})+$)/g;
+　　let n1 = num.toFixed(2).replace(/^(\d+)((\.\d+)?)$/, function (s, s1, s2) {
+　　　　return s1.replace(re, "$&,") + s2;
+　　});
+　　return n1;
+}
 
+export function formatAccount(acc) {
+  return acc.substring(0, 10) + "..." + acc.substring(acc.length - 10, acc.length);
+}

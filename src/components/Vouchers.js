@@ -48,7 +48,6 @@ export default function Vouchers(props) {
 
     // 调用本地localStorage存储
     const [noteKeys, noteArray] = getNoteStrings(accounts[0]);
-    console.log(noteKeys, noteArray);
 
     if(noteArray.length === 0) {
       setVouchers([]);
@@ -59,11 +58,15 @@ export default function Vouchers(props) {
     let depositArray = [];
     for (let i = 0; i < noteArray.length; i++) {
       const noteDetails = await getNoteDetails(noteKeys[i], noteArray[i], shaker, lib);
-      console.log(noteKeys[i], noteDetails);
-      depositArray.push(noteDetails);
+      // console.log(noteKeys[i], noteDetails);
+      if(noteDetails !== null) depositArray.push(noteDetails);
     }
-    // console.log(depositArray, depositArray.length);
-    setVouchers(depositArray);
+    if(depositArray.length === 0) {
+      setVouchers([]);
+      setIsEmpty(true);
+    } else {
+      setVouchers(depositArray);
+    }
   }
 
   /**
@@ -123,12 +126,13 @@ export default function Vouchers(props) {
           <div className="loading"><FontAwesomeIcon icon={faSpinner} spin/> Loading vouchers...</div>
           : <div className="loading"><FontAwesomeIcon icon={faFrown}/> No deposits and vouchers. Press the left-bottom 'Deposit' button to add your first vouchers.</div>
           }
+          <div className="empty-gap"></div>
           </div>
         </div>
         :
         <div>
-          <div className="connect-wallet">You have not connected to Wallet</div>
-          <div className="button-deposit" onClick={requestAccess}>Connect to wallet</div>
+          {/* <div className="connect-wallet">You have not connected to Wallet</div> */}
+          <div className="button-connect-wallet" onClick={requestAccess}>Connect to wallet</div>
         </div>
         }
       </div>

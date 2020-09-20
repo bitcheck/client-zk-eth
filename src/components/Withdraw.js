@@ -1,14 +1,12 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import "./style.css";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faFrown } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {ERC20ShakerAddress} from "../config.js";
 import {getNoteDetails, toWeiString} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
-
-//shaker-usdt-10-2000-0x8b9670272e4dc2cef109ddb89f663385b944306716013be07a7603f0318e38c6f02553f36e3893c66b93cdad8c0807303a94638e354cd51dc11a8fe41f61
 
 export default function Withdraw(props) {
   const {web3Context} = props;
@@ -23,9 +21,21 @@ export default function Withdraw(props) {
   const [hiddenNote, setHiddenNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [supportWebAssembly, setSupportWebAssembly] = useState(true);
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
   const shaker = new lib.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
+  let suportWebAssembly = false;
+
+  const checkWebAssemblySupport = () => {
+    try {
+      new WebAssembly.Memory({initial: 5000});
+      console.log("====AAA====");
+    } catch (e) {
+      console.log("====BBB====");
+      setSupportWebAssembly(false);
+    }
+  }
 
   const requestAuth = async web3Context => {
     try {
@@ -45,6 +55,10 @@ export default function Withdraw(props) {
     const body2 = body.substring(0, index2);
     return http + body2;
   }
+
+  useEffect(() => {
+    checkWebAssemblySupport();
+  },[suportWebAssembly])
 
   useEffect(()=>{
     if(accounts && accounts.length > 0) {
@@ -72,12 +86,16 @@ export default function Withdraw(props) {
       deposit, 
       recipient: withdrawAddress, 
       fee: 0,
-      refund: toWeiString(parseInt(withdrawAmount))
-    }, shaker, proving_key);
+      refund: toWeiString(parseInt(withdrawAmount)),
+    }, 
+      shaker, 
+      proving_key,       
+      accounts[0]
+    );
 
-    console.log('Submitting withdraw transaction', toWeiString(withdrawAmount));
+    // console.log('Submitting withdraw transaction', toWeiString(withdrawAmount));
     const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
-    console.log("Estimate GAS", gas);
+    // console.log("Estimate GAS", gas);
     try {
       await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       await onNoteChange();
@@ -123,7 +141,7 @@ export default function Withdraw(props) {
     if(note.substring(0, 11) !== "shaker-usdt") return;
     try {
       setLoading(true);
-      const noteDetails = await getNoteDetails(0, note, shaker, lib);
+      const noteDetails = await getNoteDetails(0, note, shaker, lib, accounts[0]);
       // console.log(noteDetails);
       // setNote(note);
       setDepositAmount(noteDetails.amount);
@@ -144,7 +162,6 @@ export default function Withdraw(props) {
       const stars = text.length;
       setNote(text);
       setHiddenNote(generateStars(stars));
-      console.log("222 ",text);
   }
 
   function generateStars(n){
@@ -164,44 +181,53 @@ export default function Withdraw(props) {
         <div className="title-bar">
           Withdraw
         </div>
-        <div className="font1">Paste your recipient:</div>
-        <textarea className="recipient-input" onChange={(e) => handleInput(e.target.value)} value={hiddenNote}></textarea>
-        {/* <textarea className="hidden" onChange={(e) => handleInputHidden(e.target.value)} value={note}></textarea> */}
-        <div className="recipient-line">
-          <div className="key">Deposit Amount</div>
-          <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositAmount} {currency}</div>
-        </div>
-        <div className="recipient-line">
-          <div className="key">Current Balance</div>
-          <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : balance} {currency}</div>
-        </div>
-        <div className="recipient-line">
-          <div className="key">Deposit Time</div>
-          <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositTime}</div>
-        </div>
-        <div className="separate-line"></div>
-        <div className="font1">Withdraw amount ({currency}):</div>
-        <input className="withdraw-input" onChange={(e) => setWithdrawAmount(e.target.value)}/>
-        <div className="font1">Withdraw address:</div>
-        <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
-        {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) ?
-        running ? 
-        <div className="button-deposit unavailable">
-          <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Withdraw
-        </div> :
-        <div className="button-deposit" onClick={withdraw}>
-          Withdraw
-        </div>
+        {supportWebAssembly ?
+        <div>
+          <div className="font1">Paste your recipient:</div>
+          <textarea className="recipient-input" onChange={(e) => handleInput(e.target.value)} value={hiddenNote}></textarea>
+          {/* <textarea className="hidden" onChange={(e) => handleInputHidden(e.target.value)} value={note}></textarea> */}
+          <div className="recipient-line">
+            <div className="key">Deposit Amount</div>
+            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositAmount} {currency}</div>
+          </div>
+          <div className="recipient-line">
+            <div className="key">Current Balance</div>
+            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : balance} {currency}</div>
+          </div>
+          <div className="recipient-line">
+            <div className="key">Deposit Time</div>
+            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositTime}</div>
+          </div>
+          <div className="separate-line"></div>
+          <div className="font1">Withdraw amount ({currency}):</div>
+          <input className="withdraw-input" onChange={(e) => setWithdrawAmount(e.target.value)}/>
+          <div className="font1">Withdraw address:</div>
+          <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+          {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) ?
+          running ? 
+          <div className="button-deposit unavailable">
+            <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Withdraw
+            <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
+          </div> :
+          <div className="button-deposit" onClick={withdraw}>
+            Withdraw
+          </div>
+          :
+          <div className="button-deposit unavailable">
+            Withdraw
+          </div>
+          }
+          <div className="empty-gap"></div>
+          </div>
         :
-        <div className="button-deposit unavailable">
-          Withdraw
+        <div className="loading"><FontAwesomeIcon icon={faFrown}/> This device don't have enough memory   for WebAssembly to calculate circuit, please use Desktop Browser such as Chrome or Firefox.
         </div>
         }
         </div>
         :
         <div>
-          <div className="connect-wallet">You have not connected to Wallet</div>
-          <div className="button-deposit" onClick={requestAccess}>Connect to wallet</div>
+          {/* <div className="connect-wallet">You have not connected to Wallet</div> */}
+          <div className="button-connect-wallet" onClick={requestAccess}>Connect to wallet</div>
         </div>
         }
       </div>

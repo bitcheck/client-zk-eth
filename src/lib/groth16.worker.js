@@ -34,24 +34,28 @@ export default (self) => {
         data = e;
     }
 
-    console.log("Worker get data", data);
+    // console.log("Worker get data", data);
     if (data.command === "INIT") {
-        console.log("==== init 1 ====")
+        // console.log("==== init 1 ====")
         const code = new Uint8Array(data.code);
-        memory = new WebAssembly.Memory({initial:data.init});
-        i32 = new Uint32Array(memory.buffer);
-  
-        console.log("==== init 2 ====")
-        WebAssembly.compile(code).then((wasmModule)=>{
-          WebAssembly.instantiate(wasmModule, {
-            env: {
-              "memory": memory
-            }
-          }).then((result)=>{
-            instance = result;
-            self.postMessage(data.result);
+        try {
+          memory = new WebAssembly.Memory({initial:data.init});
+          i32 = new Uint32Array(memory.buffer);
+    
+          // console.log("==== init 2 ====")
+          WebAssembly.compile(code).then((wasmModule)=>{
+            WebAssembly.instantiate(wasmModule, {
+              env: {
+                "memory": memory
+              }
+            }).then((result)=>{
+              instance = result;
+              self.postMessage(data.result);
+            })
           })
-        })
+        } catch(err) {
+          console.log("=== INIT Error ===", err.message);
+        }
       } else if (data.command === "G1_MULTIEXP") {
 
         const oldAlloc = i32[0];
@@ -64,7 +68,7 @@ export default (self) => {
         data.result = getBin(pRes, 96);
         i32[0] = oldAlloc;
 
-        console.log("Worker => boss", "G1_MULTIEXP");
+        // console.log("Worker => boss", "G1_MULTIEXP");
         self.postMessage(data.result, [data.result]);
     } else if (data.command === "G2_MULTIEXP") {
 
@@ -77,7 +81,7 @@ export default (self) => {
 
         data.result = getBin(pRes, 192);
         i32[0] = oldAlloc;
-        console.log("Worker => boss", "G2_MULTIEXP");
+        // console.log("Worker => boss", "G2_MULTIEXP");
         self.postMessage(data.result, [data.result]);
     } else if (data.command === "CALC_H") {
         const oldAlloc = i32[0];
@@ -119,9 +123,10 @@ export default (self) => {
 
         data.result = getBin(pPolA2+domainSize*32, domainSize*32);
         i32[0] = oldAlloc;
-        console.log("Worker => boss", "CALC_H");
+        // console.log("Worker => boss", "CALC_H");
         self.postMessage(data.result, [data.result]);
     } else if (data.command === "TERMINATE") {
+        console.log('进程终止')
         process.exit();
     }    
   });
