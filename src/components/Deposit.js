@@ -24,6 +24,7 @@ export default function Deposit(props) {
   const [selectStatus, setSelectStatus] = useState(0);
   const [orderStatus, setOrderStatus] = useState(0);//0- 无记名支票，1- 定向支票
   const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [effectiveData, setEffectiveData] = useState('');
   const [usdtBalance, setUsdtBalance] = useState(0);
   const [ethBalance, setEthBalance] = useState(0);
   const [symbol, setSymbol] = useState('USDT');
@@ -116,7 +117,6 @@ export default function Deposit(props) {
     const noteShortStrings = getNoteShortStrings(noteStrings);
 
     // 弹出对话框，确认GAS费，拆分方案，与noteString，并要求复制后才能进行下一步
-    // ######
     confirmAlert({
       customUI: ({ onClose }) => {
         return (
@@ -210,6 +210,9 @@ export default function Deposit(props) {
   const changeSelectStatus = (status) => {
     setSelectStatus(status);
   }
+  const changeEffectiveDate = (date) => {
+    // ######
+  }
   return(
     <div>
       <div className="deposit-background">
@@ -283,6 +286,12 @@ export default function Deposit(props) {
           changeSelectStatus={changeSelectStatus}
         />
         <SelectBox 
+          status={effectiveData}
+          description="Set effective date"
+          changeSelectStatus={changeEffectiveDate}
+        />
+        <Calendar />
+        <SelectBox 
           status={orderStatus}
           description="Make order to cheque"
           changeSelectStatus={openOrderToCheque}
@@ -352,3 +361,12 @@ function SelectBox(props) {
   )
 }
 
+function Calendar(props) {
+  // ###### 日期选择器
+
+  return (
+    <div>
+
+    </div>
+  )
+}
