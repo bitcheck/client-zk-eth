@@ -13,3 +13,4 @@ export const decimals = 6; // USDT Decimals is 6
 export const merkleTreeHeight=14;
 
 export const depositAmounts = [500, 1000, 2000, 5000, 10000, 20000, 50000, 120000, 200000, 500000];
+export const coins = [100, 300, 800, 3000, 4000, 8000, 30000, 130000, 300000, 400000]; //找零的钱币面值

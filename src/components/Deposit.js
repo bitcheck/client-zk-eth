@@ -53,11 +53,9 @@ export default function Deposit(props) {
   const init = async () => {
     setLoading(true);
     setIsApproved(await checkAllowance(depositAmount));
-    let usdtBalance = await getERC20Balance(accounts[0]);
-    usdtBalance = long2Short(usdtBalance, decimals);
-    setUsdtBalance(usdtBalance);
-    setGasPrice(await getGasPrice());
     setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
+    setUsdtBalance(long2Short(await getERC20Balance(accounts[0]), decimals));
+    setGasPrice(await getGasPrice());
     setLoading(false);
 }
   const getERC20Balance = async(account) => {
@@ -120,7 +118,7 @@ export default function Deposit(props) {
         return (
           <div className='confirm-box'>
             <h1>ATTENSION!!!</h1>
-            <p>Here are voucher notes, you can send them to your reciever or keep with you in safe place. Anybody can use these notes to withdraw the deposit. </p>
+            <p>Here are cheques notes, you can send them to your reciever or keep with you in safe place. Anybody can use these notes to withdraw the deposit. </p>
             <div className='note-display'>{noteShortStrings}</div>
             <CopyToClipboard text={noteStrings} onCopy={()=>onCopyNoteClick()}>
               <div className='copy-notes-button'>Copy all notes and save</div>

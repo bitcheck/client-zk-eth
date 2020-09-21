@@ -170,7 +170,7 @@ body {
   color: #50BF3E;
   font-size: 1.25em;
 }
-.voucher-item {
+.cheque-item {
   width: 90%;
   margin-left: 5%;
   margin-top: 10px;
@@ -181,7 +181,7 @@ body {
   flex: 1;
 
 }
-.voucher-item .content {
+.cheque-item .content {
   /* background-color:white; */
   margin: 10px 5px 10px 15px;
   width: 80%;
@@ -189,19 +189,19 @@ body {
   font-size: 0.8125em;
   color: #50BF3E;
 }
-.voucher-item .content .content-line {
+.cheque-item .content .content-line {
   margin-bottom: 8px;
 }
-.voucher-item .content .content-line .font2 {
+.cheque-item .content .content-line .font2 {
   font-size: 1.4375em;
   font-weight: 500;
 }
-.voucher-item .buttons {
+.cheque-item .buttons {
   /* background-color: red; */
   width: 20%;
   margin: 10px 10px 10px 5px;
 }
-.voucher-item .buttons .button {
+.cheque-item .buttons .button {
   width: 100%;
   background-color:#50BF3E;
   font-size: 0.875em;
@@ -211,7 +211,7 @@ body {
   margin-bottom: 10px;
   border-radius: 8px;
 }
-.voucher-item .buttons .orange-background {
+.cheque-item .buttons .orange-background {
   background-color: #f37018;
 }
 .loading {
@@ -290,6 +290,7 @@ body {
   color: white;
   border: none;
   border-radius: 10px;
+  margin-top: 10px;
 }
 .confirm-button-unavailable {
   background-color: grey;

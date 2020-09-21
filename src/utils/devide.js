@@ -1,4 +1,6 @@
 //动态规划 -- 硬币找零问题
+import {coins} from '../config.js';
+
 function minCoins(coins,total,n){
 	var T = [];
  
@@ -53,17 +55,6 @@ function findValue(coins,total,n,T){
 	}
 	return s;
 }
-
-const coins = [100, 300, 800, 3000, 4000, 8000, 30000, 130000, 300000, 400000]; //找零的钱币面值
-// var total = [100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 120000, 200000, 500000]; //找零金额
-// var n = coins.length
-
-// console.log("金额", "切片数", "GAS费费用率");
-// for(var i = 0; i < total.length; i++) {
-// 	var combination = minCoins(coins,total[i],n);
-// 	console.log(total[i], combination.length, (combination.length * 0.2 * 400 / total[i] * 100).toFixed(2) + "%", combination);
-// 	//200GWei的gas价格以及400U市场几个估计
-// }
 
 export const getCombination = (amount) => {
   return minCoins(coins, amount, coins.length);

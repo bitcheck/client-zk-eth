@@ -3,7 +3,7 @@ import './App.css';
 import { useWeb3 } from '@openzeppelin/network/react';
 import Deposit from './components/Deposit.js';
 import Withdraw from './components/Withdraw.js';
-import Vouchers from './components/Vouchers.js';
+import Cheques from './components/Cheques.js';
 import Menu from './components/Menu.js';
 import {HashRouter, Route, Switch} from 'react-router-dom';
 
@@ -17,7 +17,7 @@ function App() {
         <Switch>
           <Route exact path="/" render={(props) => <Deposit web3Context={web3Context} {...props}/>}/>
           <Route exact path="/withdraw" render={(props) => <Withdraw web3Context={web3Context} {...props}/>}/>
-          <Route exact path="/vouchers" render={(props) => <Vouchers web3Context={web3Context} {...props}/>}/>        
+          <Route exact path="/cheques" render={(props) => <Cheques web3Context={web3Context} {...props}/>}/>        
         </Switch>
       </HashRouter>
       <Menu />

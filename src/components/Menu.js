@@ -21,11 +21,11 @@ export default function Menu() {
         </div>
         <div className="menu-text">Withdraw</div>
       </div>
-      <div className="menu-button-right" onClick={()=>openUrl("vouchers")}>
+      <div className="menu-button-right" onClick={()=>openUrl("cheques")}>
       <div className="menu-icon">
         <FontAwesomeIcon icon={faUniversity} />
         </div>
-        <div className="menu-text">Vouchers</div>
+        <div className="menu-text">Cheques</div>
       </div>
     </div>
   )
