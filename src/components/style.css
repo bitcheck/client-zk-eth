@@ -174,7 +174,7 @@ body {
   width: 90%;
   margin-left: 5%;
   margin-top: 10px;
-  height: 100px;
+  max-height: 140px;
   border: 1px solid #50BF3E;
   border-radius: 13px;
   display:flex;
@@ -190,7 +190,7 @@ body {
   color: #50BF3E;
 }
 .cheque-item .content .content-line {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .cheque-item .content .content-line .font2 {
   font-size: 1.4375em;
@@ -274,6 +274,9 @@ body {
 .confirm-box h1 {
   color: red;
 }
+.orange {
+  color: #f37018;
+}
 .confirm-box p {
   font-size: 1.125em;
   line-height:26px;
@@ -308,8 +311,9 @@ body {
 .select-separate {
   display:flex;
   flex: 1;
-  margin-top: 20px;
+  margin-top: 10px;
   margin-left: 4%;
+  margin-bottom: 15px;
 }
 .select-box {
   border: 1px solid #50BF3E;
@@ -363,4 +367,43 @@ body {
   height: 100px;
   line-height:20px;
   text-align: left;
+}
+
+.datetime-picker {
+  background-color: #191919;
+  color: #50BF3E;
+  width:90%;
+  height: 54px;
+  border: 1px solid #50BF3E;
+  border-radius: 13px;
+  font-size: 1.3em;
+}
+.datetime-picker input, .datetime-picker select {
+  color: #50BF3E;
+}
+.datetime-picker .react-datetime-picker__button svg {
+  background-color: #50BF3E;
+  margin-right: 15px;
+}
+
+.react-datetime-picker__clock {
+  background-color: #191919;
+  border: 1px solid #50BF3E;
+  border-radius: 100px;
+}
+.react-clock__face {
+  background-color: #ecffe9;
+}
+.react-datetime-picker__wrapper {
+  border: 0px;
+}
+.calendar {
+  background-color: #191919;
+  color: white;
+  border-radius: 13px;
+  border: 1px solid #50BF3E;
+  width: 97%;
+}
+.calendar button {
+  color: white;
 }

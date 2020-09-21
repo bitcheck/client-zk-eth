@@ -1,9 +1,9 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import {ERC20ShakerAddress} from "../config.js";
-import {getNoteDetails, formatAmount} from "../utils/web3.js";
+import {getNoteDetails, formatAmount, formatAccount} from "../utils/web3.js";
 import {batchSaveNotes} from "../utils/localstorage.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy, faSpinner, faTrash, faFrown, faDownload, faUpload} from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faSpinner, faTrash, faFrown, faDownload, faUpload, faLock, faUnlockAlt} from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {CopyToClipboard} from 'react-copy-to-clipboard';
@@ -60,7 +60,7 @@ export default function Cheques(props) {
     let depositArray = [];
     for (let i = 0; i < noteArray.length; i++) {
       const noteDetails = await getNoteDetails(noteKeys[i], noteArray[i], shaker, web3);
-      // console.log(noteKeys[i], noteDetails);
+      console.log(noteKeys[i], noteDetails);
       if(noteDetails !== null) depositArray.push(noteDetails);
     }
     if(depositArray.length === 0) {
@@ -174,6 +174,9 @@ export default function Cheques(props) {
                   time={cheque.time}
                   note={cheque.note}
                   currency={cheque.currency}
+                  orderStatus={cheque.orderStatus}
+                  effectiveTime={cheque.effectiveTime}
+                  recipient={cheque.recipient}
                   eraseCheque={eraseCheque}
                 />
               )}
@@ -210,14 +213,20 @@ export default function Cheques(props) {
 
 
 function Cheque(props) {
-
+  let dt = new Date(props.effectiveTime * 1000);
+  dt = dt.toLocaleDateString() + " " + dt.toLocaleTimeString();
   return(
     <div>
       <div className="cheque-item">
         <div className="content">
-        <div className="content-line">Balance <span className="font2">{formatAmount(props.balance, 0)}</span> {props.currency.toUpperCase()}</div>
-        <div className="content-line">Deposited {props.depositAmount} {props.currency.toUpperCase()}</div>
-        <div className="content-line">On {props.time}</div>
+          <div className="content-line">Balance <span className="font2">{formatAmount(props.balance, 0)}</span> {props.currency.toUpperCase()}</div>
+          <div className="content-line">Deposited {props.depositAmount} {props.currency.toUpperCase()}
+          </div>
+          <div className="content-line">On {props.time}</div>
+          <div className="content-line">{props.orderStatus * 1 === 0 ? "To Bearer" : "To Order of " + formatAccount(props.recipient)}</div>
+          <div className="content-line">
+            {props.effectiveTime * 1 > (new Date().getTime()) / 1000 ? <div><FontAwesomeIcon icon={faLock}/> Until {dt}</div> : ''}
+          </div>
         </div>
         <div className="buttons">
           <CopyToClipboard text={props.note} onCopy={()=>{toast.success('The cheque note has been copied, you can send to the reciever.')}}>

@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import "./style.css";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faFrown } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faFrown, faLock, faUnlock } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {ERC20ShakerAddress} from "../config.js";
@@ -23,6 +23,10 @@ export default function Withdraw(props) {
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [supportWebAssembly, setSupportWebAssembly] = useState(true);
+  const [orderStatus, setOrderStatus] = useState(2);
+  const [effectiveTime, setEffectiveTime] = useState(0);
+  const [effectiveTimeString, setEffectiveTimeString] = useState('');
+  const [recipient, setRecipient] = useState('');
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
   const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
@@ -81,7 +85,7 @@ export default function Withdraw(props) {
     const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
     const url = getUrl();
     const proving_key = await (await fetch(`${url}/circuits/withdraw_proving_key.bin`)).arrayBuffer();
-    // console.log("proving_key", proving_key); //######
+    // console.log("proving_key", proving_key);
 
     const { proof, args } = await generateProof({ 
       deposit, 
@@ -96,7 +100,7 @@ export default function Withdraw(props) {
 
     // console.log('Submitting withdraw transaction', toWeiString(withdrawAmount));
     const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
-    // console.log("Estimate GAS", gas);
+    console.log("Estimate GAS", gas);
     try {
       await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       await onNoteChange();
@@ -146,10 +150,16 @@ export default function Withdraw(props) {
     try {
       setLoading(true);
       const noteDetails = await getNoteDetails(0, note, shaker, web3, accounts[0]);
+      console.log(noteDetails);
       setDepositAmount(noteDetails.amount);
       setBalance(noteDetails.amount - noteDetails.totalWithdraw);
       setDepositTime(noteDetails.time);
       setCurrency(noteDetails.currency.toUpperCase());
+      setOrderStatus(noteDetails.orderStatus * 1);
+      setEffectiveTime(noteDetails.effectiveTime * 1);
+      const dt = new Date(noteDetails.effectiveTime * 1000);
+      setEffectiveTimeString(dt.toLocaleDateString() + " " + dt.toLocaleTimeString());
+      setRecipient(noteDetails.recipient);
       setLoading(false);
     } catch (e) {
       toast.success("Note is wrong, can not get data");
@@ -189,6 +199,10 @@ export default function Withdraw(props) {
           <textarea className="recipient-input" onChange={(e) => handleInput(e.target.value)} value={hiddenNote}></textarea>
           {/* <textarea className="hidden" onChange={(e) => handleInputHidden(e.target.value)} value={note}></textarea> */}
           <div className="recipient-line">
+            <div className="key">Type</div>
+            <div className="value">{orderStatus === 2 ? '-': orderStatus === 1 ? 'Cheque to Order':'Cheque to Bearer'}</div>
+          </div>
+          <div className="recipient-line">
             <div className="key">Deposit Amount</div>
             <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : formatAmount(depositAmount, 0)} {currency}</div>
           </div>
@@ -200,11 +214,35 @@ export default function Withdraw(props) {
             <div className="key">Deposit Time</div>
             <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositTime}</div>
           </div>
-          <div className="separate-line"></div>
-          <div className="font1">Withdraw amount ({currency}):</div>
+
+          {effectiveTime * 1000 > (new Date()).getTime() ? 
+          <div className="recipient-line">
+            <div className="key">Effective Time</div>
+            <div className="value"><FontAwesomeIcon icon={faLock} className="orange"/> {effectiveTimeString}</div>
+          </div>
+          : ''}
+
+          {/* <div className="separate-line"></div> */}
+
+          {effectiveTime * 1000 < (new Date()).getTime() ? 
+          <div>
+          <div className="font1">Withdraw amount ({currency})</div>
           <input className="withdraw-input" onChange={(e) => setWithdrawAmount(e.target.value)}/>
-          <div className="font1">Withdraw address:</div>
-          <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+          </div>
+          : ''}
+
+          {effectiveTime * 1000 > (new Date()).getTime() && orderStatus === 0 ? '' :
+          <div>
+            <div className="font1">Withdraw address</div>
+            {orderStatus === 0 ? 
+              <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+              :
+              <input className="withdraw-input withdraw-address" value={recipient} readOnly/>
+            }
+          </div>
+          }
+
+
           {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) ?
           running ? 
           <div className="button-deposit unavailable">

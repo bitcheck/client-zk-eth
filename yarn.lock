@@ -2088,6 +2088,11 @@
   resolved "https://registry.npm.taobao.org/@types/q/download/@types/q-1.5.4.tgz#15925414e0ad2cd765bfef58842f7e26a7accb24"
   integrity sha1-FZJUFOCtLNdlv+9YhC9+JqesyyQ=
 
+"@types/react-calendar@^3.0.0":
+  version "3.1.1"
+  resolved "https://registry.npm.taobao.org/@types/react-calendar/download/@types/react-calendar-3.1.1.tgz#cbe7f08e0ebf99fc321511a443d9552ea90532bd"
+  integrity sha1-y+fwjg6/mfwyFRGkQ9lVLqkFMr0=
+
 "@types/react-dom@*":
   version "16.9.8"
   resolved "https://registry.npm.taobao.org/@types/react-dom/download/@types/react-dom-16.9.8.tgz?cache=0&sync_timestamp=1596841046245&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2F%40types%2Freact-dom%2Fdownload%2F%40types%2Freact-dom-16.9.8.tgz#fe4c1e11dfc67155733dfa6aa65108b4971cb423"
@@ -2345,6 +2350,11 @@
     "@webassemblyjs/ast" "1.8.5"
     "@webassemblyjs/wast-parser" "1.8.5"
     "@xtuc/long" "4.2.2"
+
+"@wojtekmaj/date-utils@^1.0.0", "@wojtekmaj/date-utils@^1.0.2", "@wojtekmaj/date-utils@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.npm.taobao.org/@wojtekmaj/date-utils/download/@wojtekmaj/date-utils-1.0.3.tgz#2dcfd92881425c5923e429c2aec86fb3609032a1"
+  integrity sha1-Lc/ZKIFCXFkj5CnCrshvs2CQMqE=
 
 "@xtuc/ieee754@^1.2.0":
   version "1.2.0"
@@ -5153,6 +5163,11 @@ destroy@~1.0.4:
   resolved "https://registry.npm.taobao.org/destroy/download/destroy-1.0.4.tgz#978857442c44749e4206613e37946205826abd80"
   integrity sha1-l4hXRCxEdJ5CBmE+N5RiBYJqvYA=
 
+detect-element-overflow@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.npm.taobao.org/detect-element-overflow/download/detect-element-overflow-1.2.0.tgz#86e504292ffedc3aef813395fbdf0261aaf6afa9"
+  integrity sha1-huUEKS/+3DrvgTOV+98CYar2r6k=
+
 detect-indent@^4.0.0:
   version "4.0.0"
   resolved "https://registry.npm.taobao.org/detect-indent/download/detect-indent-4.0.0.tgz#f76d064352cdf43a1cb6ce619c4ee3a9475de208"
@@ -6745,6 +6760,13 @@ get-stream@^5.1.0:
   integrity sha1-SWaheV7lrOZecGxLe+txJX1uItM=
   dependencies:
     pump "^3.0.0"
+
+get-user-locale@^1.2.0:
+  version "1.4.0"
+  resolved "https://registry.npm.taobao.org/get-user-locale/download/get-user-locale-1.4.0.tgz#a2c4b5da46feec9f03c9b07d197b1620490a5370"
+  integrity sha1-osS12kb+7J8DybB9GXsWIEkKU3A=
+  dependencies:
+    lodash.once "^4.1.1"
 
 get-value@^2.0.3, get-value@^2.0.6:
   version "2.0.6"
@@ -8764,6 +8786,11 @@ lodash.memoize@^4.1.2:
   resolved "https://registry.npm.taobao.org/lodash.memoize/download/lodash.memoize-4.1.2.tgz#bcc6c49a42a2840ed997f323eada5ecd182e0bfe"
   integrity sha1-vMbEmkKihA7Zl/Mj6tpezRguC/4=
 
+lodash.once@^4.1.1:
+  version "4.1.1"
+  resolved "https://registry.npm.taobao.org/lodash.once/download/lodash.once-4.1.1.tgz#0dd3971213c7c56df880977d504c88fb471a97ac"
+  integrity sha1-DdOXEhPHxW34gJd9UEyI+0cal6w=
+
 lodash.sortby@^4.7.0:
   version "4.7.0"
   resolved "https://registry.npm.taobao.org/lodash.sortby/download/lodash.sortby-4.7.0.tgz#edd14c824e2cc9c1e0b0a1b42bb5210516a42438"
@@ -8844,6 +8871,11 @@ make-dir@^3.0.2:
   integrity sha1-QV6WcEazp/HRhSd9hKpYIDcmoT8=
   dependencies:
     semver "^6.0.0"
+
+make-event-props@^1.1.0:
+  version "1.2.0"
+  resolved "https://registry.npm.taobao.org/make-event-props/download/make-event-props-1.2.0.tgz#96b87d88919533b8f8934b58b4c3d5679459a0cf"
+  integrity sha1-lrh9iJGVM7j4k0tYtMPVZ5RZoM8=
 
 makeerror@1.0.x:
   version "1.0.11"
@@ -8929,6 +8961,11 @@ memory-fs@^0.5.0:
   dependencies:
     errno "^0.1.3"
     readable-stream "^2.0.1"
+
+merge-class-names@^1.1.1:
+  version "1.3.0"
+  resolved "https://registry.npm.taobao.org/merge-class-names/download/merge-class-names-1.3.0.tgz#c4cdc1a981a81dd9afc27aa4287e912a337c5dee"
+  integrity sha1-xM3BqYGoHdmvwnqkKH6RKjN8Xe4=
 
 merge-deep@^3.0.2:
   version "3.0.2"
@@ -10962,7 +10999,7 @@ prompts@^2.0.1:
     kleur "^3.0.3"
     sisteransi "^1.0.4"
 
-prop-types@^15.5.8, prop-types@^15.6.2, prop-types@^15.7.2:
+prop-types@^15.5.8, prop-types@^15.6.0, prop-types@^15.6.2, prop-types@^15.7.2:
   version "15.7.2"
   resolved "https://registry.npm.taobao.org/prop-types/download/prop-types-15.7.2.tgz#52c41e75b8c87e72b9d9360e0206b99dcbffa6c5"
   integrity sha1-UsQedbjIfnK52TYOAga5ncv/psU=
@@ -11151,6 +11188,24 @@ react-app-polyfill@^1.0.6:
     regenerator-runtime "^0.13.3"
     whatwg-fetch "^3.0.0"
 
+react-calendar@^3.0.0:
+  version "3.1.0"
+  resolved "https://registry.npm.taobao.org/react-calendar/download/react-calendar-3.1.0.tgz#7a384a70f98e02177d176c45f6918fb6a15ce41f"
+  integrity sha1-ejhKcPmOAhd9F2xF9pGPtqFc5B8=
+  dependencies:
+    "@wojtekmaj/date-utils" "^1.0.2"
+    get-user-locale "^1.2.0"
+    merge-class-names "^1.1.1"
+    prop-types "^15.6.0"
+
+react-clock@^2.3.0:
+  version "2.4.0"
+  resolved "https://registry.npm.taobao.org/react-clock/download/react-clock-2.4.0.tgz#39540f84e16f8b2c2137640f535c162041bd2a1e"
+  integrity sha1-OVQPhOFviywhN2QPU1wWIEG9Kh4=
+  dependencies:
+    merge-class-names "^1.1.1"
+    prop-types "^15.6.0"
+
 react-confirm-alert@^2.6.2:
   version "2.6.2"
   resolved "https://registry.npm.taobao.org/react-confirm-alert/download/react-confirm-alert-2.6.2.tgz#775c6e5233cd2c4b06f4ddedd59b8de03e071876"
@@ -11163,6 +11218,37 @@ react-copy-to-clipboard@^5.0.2:
   dependencies:
     copy-to-clipboard "^3"
     prop-types "^15.5.8"
+
+react-date-picker@^8.0.0:
+  version "8.0.3"
+  resolved "https://registry.npm.taobao.org/react-date-picker/download/react-date-picker-8.0.3.tgz#6814e3b5f8ce0ffa9e12bbc932ab852389c56b11"
+  integrity sha1-aBTjtfjOD/qeErvJMquFI4nFaxE=
+  dependencies:
+    "@types/react-calendar" "^3.0.0"
+    "@wojtekmaj/date-utils" "^1.0.3"
+    get-user-locale "^1.2.0"
+    make-event-props "^1.1.0"
+    merge-class-names "^1.1.1"
+    prop-types "^15.6.0"
+    react-calendar "^3.0.0"
+    react-fit "^1.0.3"
+    update-input-width "^1.1.1"
+
+react-datetime-picker@^3.0.4:
+  version "3.0.4"
+  resolved "https://registry.npm.taobao.org/react-datetime-picker/download/react-datetime-picker-3.0.4.tgz#10e899d4c1fd9663065213b1edc70aea46376175"
+  integrity sha1-EOiZ1MH9lmMGUhOx7ccK6kY3YXU=
+  dependencies:
+    "@wojtekmaj/date-utils" "^1.0.3"
+    get-user-locale "^1.2.0"
+    make-event-props "^1.1.0"
+    merge-class-names "^1.1.1"
+    prop-types "^15.6.0"
+    react-calendar "^3.0.0"
+    react-clock "^2.3.0"
+    react-date-picker "^8.0.0"
+    react-fit "^1.0.3"
+    react-time-picker "^4.0.0"
 
 react-dev-utils@^10.2.1:
   version "10.2.1"
@@ -11208,6 +11294,14 @@ react-error-overlay@^6.0.7:
   version "6.0.7"
   resolved "https://registry.npm.taobao.org/react-error-overlay/download/react-error-overlay-6.0.7.tgz#1dcfb459ab671d53f660a991513cb2f0a0553108"
   integrity sha1-Hc+0WatnHVP2YKmRUTyy8KBVMQg=
+
+react-fit@^1.0.3:
+  version "1.2.1"
+  resolved "https://registry.npm.taobao.org/react-fit/download/react-fit-1.2.1.tgz#cd51ee2f2dcb56038d78c228bd63231d2121e17f"
+  integrity sha1-zVHuLy3LVgONeMIovWMjHSEh4X8=
+  dependencies:
+    detect-element-overflow "^1.2.0"
+    prop-types "^15.6.0"
 
 react-is@^16.12.0, react-is@^16.6.0, react-is@^16.7.0, react-is@^16.8.1, react-is@^16.8.4:
   version "16.13.1"
@@ -11302,6 +11396,20 @@ react-scripts@3.4.3:
     workbox-webpack-plugin "4.3.1"
   optionalDependencies:
     fsevents "2.1.2"
+
+react-time-picker@^4.0.0:
+  version "4.0.1"
+  resolved "https://registry.npm.taobao.org/react-time-picker/download/react-time-picker-4.0.1.tgz#ec3ee385377c8c6c8271a2dd1178452f6b11ad84"
+  integrity sha1-7D7jhTd8jGyCcaLdEXhFL2sRrYQ=
+  dependencies:
+    "@wojtekmaj/date-utils" "^1.0.0"
+    get-user-locale "^1.2.0"
+    make-event-props "^1.1.0"
+    merge-class-names "^1.1.1"
+    prop-types "^15.6.0"
+    react-clock "^2.3.0"
+    react-fit "^1.0.3"
+    update-input-width "^1.1.1"
 
 react-toastify@^6.0.8:
   version "6.0.8"
@@ -13157,6 +13265,11 @@ upath@^1.1.1:
   version "1.2.0"
   resolved "https://registry.npm.taobao.org/upath/download/upath-1.2.0.tgz#8f66dbcd55a883acdae4408af8b035a5044c1894"
   integrity sha1-j2bbzVWog6za5ECK+LA1pQRMGJQ=
+
+update-input-width@^1.1.1:
+  version "1.2.1"
+  resolved "https://registry.npm.taobao.org/update-input-width/download/update-input-width-1.2.1.tgz#769d6182413590c3b50b52ffa9c65d79e2c17f95"
+  integrity sha1-dp1hgkE1kMO1C1L/qcZdeeLBf5U=
 
 uri-js@^4.2.2:
   version "4.4.0"

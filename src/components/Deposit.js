@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import {ERC20ShakerAddress, USDTAddress} from "../config.js";
 import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faCircle, faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {toWeiString, long2Short, formatAmount, formatAccount, getGasPrice, getERC20Symbol} from "../utils/web3";
@@ -11,6 +11,8 @@ import {depositAmounts, decimals} from "../config.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage";
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import { confirmAlert } from 'react-confirm-alert'; // Import
+import DateTimePicker from 'react-datetime-picker';
+
 import './react-confirm-alert.css'; // Import css
 import "./style.css";
 
@@ -24,7 +26,8 @@ export default function Deposit(props) {
   const [selectStatus, setSelectStatus] = useState(0);
   const [orderStatus, setOrderStatus] = useState(0);//0- 无记名支票，1- 定向支票
   const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [effectiveData, setEffectiveData] = useState('');
+  const [effectiveTime, setEffectiveTime] = useState(parseInt((new Date()).valueOf() / 1000));
+  const [effectiveTimeStatus, setEffectiveTimeStatus] = useState(0);
   const [usdtBalance, setUsdtBalance] = useState(0);
   const [ethBalance, setEthBalance] = useState(0);
   const [symbol, setSymbol] = useState('USDT');
@@ -91,6 +94,12 @@ export default function Deposit(props) {
       return;
     }
 
+    if((orderStatus === 0 || withdrawAddress === "") && orderStatus === 1) {
+      toast.success("You have choose to issue cheque for order, but the withdraw address is empty");
+      setLoading(false);
+      return;
+    }
+
     const netId = await web3.eth.net.getId();
     let combination;
     if(selectStatus === 1) {
@@ -112,7 +121,12 @@ export default function Deposit(props) {
       amounts.push(toWeiString(combination[i]));
     }
     // console.log(amounts, noteStrings, commitments);
-    const gas = await shaker.methods.depositERC20Batch(amounts, commitments).estimateGas({ from: accounts[0], gas: 10e6});
+    // this accounts[0] means nothing, just to be legal
+    const withdrawAddr = orderStatus === 1 ? withdrawAddress : accounts[0];
+    console.log(amounts, commitments, orderStatus, withdrawAddr, effectiveTime);
+    const et = effectiveTimeStatus === 1 ? effectiveTime : parseInt((new Date().getTime()) / 1000);
+    console.log(("------>", et));
+    const gas = await shaker.methods.depositERC20Batch(amounts, commitments, orderStatus, withdrawAddr, et).estimateGas({ from: accounts[0], gas: 10e6});
     console.log("Estimate GAS", gas);
     const noteShortStrings = getNoteShortStrings(noteStrings);
 
@@ -128,6 +142,7 @@ export default function Deposit(props) {
               <div className='copy-notes-button'>Copy all notes and save</div>
             </CopyToClipboard>
             <p>Estimated GAS Fee: {(gas * gasPrice * 1.1 / 1e9).toFixed(6)} ETH</p>
+            {orderStatus === 1 ? <div><p>Recipient: {formatAccount(withdrawAddress)}</p></div> : ""}
             <button className='confirm-button'
               onClick={() => {
                 if(!noteCopied) {
@@ -169,11 +184,14 @@ export default function Deposit(props) {
   }
 
   const doDeposit = async(amounts, commitments, noteStrings, gas) => {
+    const withdrawAddr = orderStatus === 1 ? withdrawAddress : accounts[0];
     let keys = [];
     try {
       // Save to localStorage
       for(let i = 0; i < noteStrings.length; i++) keys.push(saveNoteString(accounts[0], noteStrings[i]));
-      await shaker.methods.depositERC20Batch(amounts, commitments).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
+      const et = effectiveTimeStatus === 1 ? effectiveTime : parseInt((new Date().getTime()) / 1000);
+      console.log("=====> ", et);
+      await shaker.methods.depositERC20Batch(amounts, commitments, orderStatus, withdrawAddr, et).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       setLoading(false);
     } catch (err) {
       console.log(err);
@@ -210,8 +228,14 @@ export default function Deposit(props) {
   const changeSelectStatus = (status) => {
     setSelectStatus(status);
   }
-  const changeEffectiveDate = (date) => {
-    // ######
+  const changeEffectiveTimeStatus = () => {
+    setEffectiveTimeStatus(effectiveTimeStatus == 0 ? 1 : 0);
+  }
+  const onEffectiveTimeChange = (datetime) => {
+    console.log(datetime);
+    const timeStamp = (new Date(datetime).getTime()) / 1000;
+    console.log(timeStamp);
+    setEffectiveTime(timeStamp);
   }
   return(
     <div>
@@ -236,9 +260,9 @@ export default function Deposit(props) {
         </div>
         <div className="recipient-line">
           <div className="key">Gas Price</div>
-          <div className="value">{gasPrice} GWei</div>
+          <div className="value">{formatAmount(gasPrice, 0)} GWei</div>
         </div>
-        <div className="font1">Select deposit amount:</div>
+        <div className="font1">Select deposit amount</div>
         <div className="button-line">
           <SelectButton id="0" symbol={symbol} amount={depositAmounts[0]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
           <SelectButton id="1" symbol={symbol} amount={depositAmounts[1]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
@@ -268,7 +292,39 @@ export default function Deposit(props) {
           <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
         </div> 
         :
-        <div className="button-deposit" onClick={deposit}>Deposit</div>
+        <div>
+          <SelectBox 
+            status={selectStatus}
+            description="If divided into 3-5 parts to deposit."
+            changeSelectStatus={changeSelectStatus}
+          />
+          <SelectBox 
+            status={effectiveTimeStatus}
+            description="Set effective date and time"
+            changeSelectStatus={changeEffectiveTimeStatus}
+          />
+          {effectiveTimeStatus == 1 ?
+          <DateTimePicker 
+            onChange={onEffectiveTimeChange} 
+            value={new Date(effectiveTime * 1000)}
+            calendarClassName="calendar"
+            className="datetime-picker"
+            clearIcon={null}
+          />
+          : ""}
+          <SelectBox 
+            status={orderStatus}
+            description="Make order to cheque"
+            changeSelectStatus={openOrderToCheque}
+          />
+          {orderStatus === 1 ?
+          <div className="order-to-cheque">
+            <div className="font1">Withdraw address:</div>
+            <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+          </div>
+          : ""}
+          <div className="button-deposit" onClick={deposit}>Deposit</div>
+        </div>
         :
         loading ? 
         <div>
@@ -280,28 +336,6 @@ export default function Deposit(props) {
         :
         <div className="button-approve" onClick={setAllowance}>Approve</div>
         }
-        <SelectBox 
-          status={selectStatus}
-          description="If divided into 3-5 parts to deposit."
-          changeSelectStatus={changeSelectStatus}
-        />
-        <SelectBox 
-          status={effectiveData}
-          description="Set effective date"
-          changeSelectStatus={changeEffectiveDate}
-        />
-        <Calendar />
-        <SelectBox 
-          status={orderStatus}
-          description="Make order to cheque"
-          changeSelectStatus={openOrderToCheque}
-        />
-        {orderStatus === 1 ?
-        <div className="order-to-cheque">
-          <div className="font1">Withdraw address:</div>
-          <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
-        </div>
-        : ""}
         <div className="empty-gap"></div>
         </div>
         : 
@@ -352,21 +386,11 @@ function SelectBox(props) {
       <div className="select-box" onClick={onClick}>
         <div className="selector">
           {status === 1 ? 
-          <FontAwesomeIcon icon={faCheck}/>
+          <FontAwesomeIcon icon={faTimes}/>
           : ''}
           </div>
       </div>
       <div className="description" onClick={onClick}>{props.description}</div>
-    </div>
-  )
-}
-
-function Calendar(props) {
-  // ###### 日期选择器
-
-  return (
-    <div>
-
     </div>
   )
 }

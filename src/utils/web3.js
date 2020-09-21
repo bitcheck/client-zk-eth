@@ -25,6 +25,9 @@ export const getNoteDetails = async (noteKey, note, shaker, lib, account) => {
     timestamp: depositInfo.timestamp,
     withdrawArray: withdrawData === undefined ? [] : withdrawData.withdrawArray,
     totalWithdraw: withdrawData === undefined ? 0 : withdrawData.totalWithdraw,
+    orderStatus: depositInfo.orderStatus, 
+    recipient: depositInfo.recipient,
+    effectiveTime: depositInfo.effectiveTime,
     note: note
   })
 }
@@ -42,12 +45,12 @@ export async function loadDepositData({ deposit }, shaker, lib, account) {
       return null;
     }
 
-    const { timestamp } = eventWhenHappened[0].returnValues
+    const { timestamp, orderStatus, recipient, effectiveTime } = eventWhenHappened[0].returnValues
     const txHash = eventWhenHappened[0].transactionHash
     const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call({ from: account, gas: 1e6})
     const receipt = await lib.eth.getTransactionReceipt(txHash)
 
-    return { timestamp, txHash, isSpent, from: receipt.from, commitment: deposit.commitmentHex }
+    return { timestamp, txHash, isSpent, from: receipt.from, commitment: deposit.commitmentHex, orderStatus, recipient, effectiveTime }
   } catch (e) {
     console.error('loadDepositData', e)
     return null;
@@ -102,14 +105,18 @@ export function formatAmount(n, decimals = 2) {
 }
 
 export function formatAccount(acc) {
-  return acc.substring(0, 10) + "..." + acc.substring(acc.length - 10, acc.length);
+  return acc.substring(0, 8) + "..." + acc.substring(acc.length - 6, acc.length);
 }
 
 export async function getGasPrice() {
-  const defaultRpc = 'https://mainnet.infura.io/v3/3446259cb0e74d68b614f9a10328a368'
-  const oracle = new GasPriceOracle({ defaultRpc });
-   
-  return await oracle.fetchGasPricesOnChain();
+  try {
+    const defaultRpc = 'https://mainnet.infura.io/v3/3446259cb0e74d68b614f9a10328a368'
+    const oracle = new GasPriceOracle({ defaultRpc });
+     
+    return await oracle.fetchGasPricesOnChain();  
+  } catch (err) {
+    return 100; // Default if network error
+  }
 }
 
 export const getERC20Symbol = async(contract) => {

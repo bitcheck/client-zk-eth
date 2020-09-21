@@ -6,7 +6,7 @@
 
 // Kovan network
 export const USDTAddress="0x79C6B89D0C939e6D1C45Aa384C321bf668752624";
-export const ERC20ShakerAddress="0xaa8E4dE1b2d777a40E3f0acA1590494fb0be86fC";
+export const ERC20ShakerAddress="0x7d4DF00a05Ed1be94c13aA535E037101b5851b58";
 // export const ETHShakerAddress="0x2794669bd766AB95fD6F2Ed9A4c534b12c809041";
 
 export const decimals = 6; // USDT Decimals is 6
@@ -14,3 +14,5 @@ export const merkleTreeHeight=14;
 
 export const depositAmounts = [500, 1000, 2000, 5000, 10000, 20000, 50000, 120000, 200000, 500000];
 export const coins = [100, 300, 800, 3000, 4000, 8000, 30000, 130000, 300000, 400000]; //找零的钱币面值
+
+//0x615b80388E3D3CaC6AA3a904803acfE7939f0399
