@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {toWeiString, long2Short, formatAmount, formatAccount, getGasPrice} from "../utils/web3";
+import {toWeiString, long2Short, formatAmount, formatAccount, getGasPrice, getERC20Symbol} from "../utils/web3";
 import {getCombination} from "../utils/devide.js";
 import {depositAmounts, decimals} from "../config.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage";
@@ -22,8 +22,11 @@ export default function Deposit(props) {
   const [isApproved, setIsApproved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectStatus, setSelectStatus] = useState(0);
+  const [orderStatus, setOrderStatus] = useState(0);//0- 无记名支票，1- 定向支票
+  const [withdrawAddress, setWithdrawAddress] = useState('');
   const [usdtBalance, setUsdtBalance] = useState(0);
   const [ethBalance, setEthBalance] = useState(0);
+  const [symbol, setSymbol] = useState('USDT');
   const [gasPrice, setGasPrice] = useState(0);
 
   const web3 = lib;
@@ -56,6 +59,7 @@ export default function Deposit(props) {
     setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
     setUsdtBalance(long2Short(await getERC20Balance(accounts[0]), decimals));
     setGasPrice(await getGasPrice());
+    setSymbol(await getERC20Symbol(erc20));
     setLoading(false);
 }
   const getERC20Balance = async(account) => {
@@ -75,9 +79,8 @@ export default function Deposit(props) {
     setLoading(true);
     noteCopied = false;
     // send to smart comtract
-    // console.log("USDT Balance", usdtBalance);
     if(usdtBalance < depositAmount) {
-      toast.success("USDT Balance is below deposit");
+      toast.success(symbol + " Balance is below deposit");
       setLoading(false);
       return;
     }
@@ -101,7 +104,8 @@ export default function Deposit(props) {
     for(let i = 0; i < combination.length; i++) {
       const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
       const note = toHex(deposit.preimage, 62) //获取零知识证明
-      const noteString = `shaker-usdt-${combination[i]}-${netId}-${note}` //零知识证明Note
+      const noteString = `shaker-${symbol.toLowerCase()}-${combination[i]}-${netId}-${note}` //零知识证明Note
+      console.log(noteString);
       noteStrings.push(noteString);
       commitments.push(deposit.commitmentHex);
       amounts.push(toWeiString(combination[i]));
@@ -198,6 +202,10 @@ export default function Deposit(props) {
       setLoading(false);
     }
   }
+  const openOrderToCheque = () => {
+    console.log("make order to cheque");
+    setOrderStatus(orderStatus == 0 ? 1 : 0);
+  }
 
   const changeSelectStatus = (status) => {
     setSelectStatus(status);
@@ -220,8 +228,8 @@ export default function Deposit(props) {
           <div className="value">{formatAmount(ethBalance, 4)} ETH</div>
         </div>
         <div className="recipient-line">
-          <div className="key">USDT Balance</div>
-          <div className="value">{formatAmount(usdtBalance, 2)} USDT</div>
+          <div className="key">{symbol} Balance</div>
+          <div className="value">{formatAmount(usdtBalance, 2)} {symbol}</div>
         </div>
         <div className="recipient-line">
           <div className="key">Gas Price</div>
@@ -229,24 +237,24 @@ export default function Deposit(props) {
         </div>
         <div className="font1">Select deposit amount:</div>
         <div className="button-line">
-          <SelectButton id="0" amount={depositAmounts[0]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="1" amount={depositAmounts[1]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="0" symbol={symbol} amount={depositAmounts[0]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="1" symbol={symbol} amount={depositAmounts[1]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
         </div>
         <div className="button-line">
-          <SelectButton id="2" amount={depositAmounts[2]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="3" amount={depositAmounts[3]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="2" symbol={symbol} amount={depositAmounts[2]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="3" symbol={symbol} amount={depositAmounts[3]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
         </div>
         <div className="button-line">
-          <SelectButton id="4" amount={depositAmounts[4]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="5" amount={depositAmounts[5]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="4" symbol={symbol} amount={depositAmounts[4]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="5" symbol={symbol} amount={depositAmounts[5]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
         </div>
         <div className="button-line">
-          <SelectButton id="6" amount={depositAmounts[6]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="7" amount={depositAmounts[7]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="6" symbol={symbol} amount={depositAmounts[6]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="7" symbol={symbol} amount={depositAmounts[7]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
         </div>
         <div className="button-line">
-          <SelectButton id="8" amount={depositAmounts[8]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="9" amount={depositAmounts[9]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="8" symbol={symbol} amount={depositAmounts[8]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+          <SelectButton id="9" symbol={symbol} amount={depositAmounts[9]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
         </div>
 
         {isApproved ? 
@@ -274,6 +282,17 @@ export default function Deposit(props) {
           description="If divided into 3-5 parts to deposit."
           changeSelectStatus={changeSelectStatus}
         />
+        <SelectBox 
+          status={orderStatus}
+          description="Make order to cheque"
+          changeSelectStatus={openOrderToCheque}
+        />
+        {orderStatus === 1 ?
+        <div className="order-to-cheque">
+          <div className="font1">Withdraw address:</div>
+          <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+        </div>
+        : ""}
         <div className="empty-gap"></div>
         </div>
         : 
@@ -288,7 +307,7 @@ export default function Deposit(props) {
 }
 
 function SelectButton(props) {
-  const {amount, side, id, selectedId} = props;
+  const {amount, side, id, selectedId, symbol} = props;
   const [selected, setSelected] = useState(false);
 
   useEffect(() => {
@@ -305,7 +324,7 @@ function SelectButton(props) {
       <div id={id} className={"select-button" + " button-" + side + (selected ? " button-selected" : "")}
         onClick={onClick}>
         <span className="select-amount">{amount}</span>
-        <span className="usdt">USDT</span>
+        <span className="usdt">{symbol}</span>
       </div>
   )
 }
@@ -328,7 +347,7 @@ function SelectBox(props) {
           : ''}
           </div>
       </div>
-      <div className="description">{props.description}</div>
+      <div className="description" onClick={onClick}>{props.description}</div>
     </div>
   )
 }

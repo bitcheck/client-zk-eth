@@ -173,6 +173,7 @@ export default function Cheques(props) {
                   totalAmount={cheque.amount}
                   time={cheque.time}
                   note={cheque.note}
+                  currency={cheque.currency}
                   eraseCheque={eraseCheque}
                 />
               )}
@@ -214,8 +215,8 @@ function Cheque(props) {
     <div>
       <div className="cheque-item">
         <div className="content">
-        <div className="content-line">Balance <span className="font2">{formatAmount(props.balance, 0)}</span> USDT</div>
-        <div className="content-line">Deposited {props.depositAmount} USDT</div>
+        <div className="content-line">Balance <span className="font2">{formatAmount(props.balance, 0)}</span> {props.currency.toUpperCase()}</div>
+        <div className="content-line">Deposited {props.depositAmount} {props.currency.toUpperCase()}</div>
         <div className="content-line">On {props.time}</div>
         </div>
         <div className="buttons">

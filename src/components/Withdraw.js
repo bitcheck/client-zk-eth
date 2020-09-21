@@ -17,7 +17,7 @@ export default function Withdraw(props) {
   const [depositAmount, setDepositAmount] = useState(0);
   const [depositTime, setDepositTime] = useState("-");
   const [balance, setBalance] = useState(0);
-  const [currency, setCurrency] = useState("USDT");
+  const [currency, setCurrency] = useState("");
   const [note, setNote] = useState("");
   const [hiddenNote, setHiddenNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -140,12 +140,12 @@ export default function Withdraw(props) {
   }, [note]);
 
   const onNoteChange = async () => {
-    if(note.substring(0, 11) !== "shaker-usdt") return;
+    if(note.substring(0, 6) !== "shaker") {
+      return;
+    }
     try {
       setLoading(true);
       const noteDetails = await getNoteDetails(0, note, shaker, web3, accounts[0]);
-      // console.log(noteDetails);
-      // setNote(note);
       setDepositAmount(noteDetails.amount);
       setBalance(noteDetails.amount - noteDetails.totalWithdraw);
       setDepositTime(noteDetails.time);

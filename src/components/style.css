@@ -313,20 +313,20 @@ body {
 }
 .select-box {
   border: 1px solid #50BF3E;
-  border-radius: 8px;
-  height: 25px;
-  width: 25px;
+  border-radius: 6px;
+  height: 20px;
+  width: 20px;
   margin-left: 5px;
 }
 .select-box .selector {
   color: #50BF3E;
-  line-height: 25px;
+  line-height: 20px;
   font-size: 18px;
 }
 .description {
   color: #50BF3E;
-  line-height: 30px;
-  font-size: 1.1em;
+  line-height: 20px;
+  font-size: 1em;
   margin-left: 10px;
   text-align: left;
 }

@@ -111,3 +111,7 @@ export async function getGasPrice() {
    
   return await oracle.fetchGasPricesOnChain();
 }
+
+export const getERC20Symbol = async(contract) => {
+  return await contract.methods.symbol().call();
+}
