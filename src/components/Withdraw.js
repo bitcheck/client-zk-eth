@@ -27,6 +27,7 @@ export default function Withdraw(props) {
   const [effectiveTime, setEffectiveTime] = useState(0);
   const [effectiveTimeString, setEffectiveTimeString] = useState('');
   const [recipient, setRecipient] = useState('');
+  const [showContent, setShowContent] = useState(false);
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
   const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
@@ -104,9 +105,11 @@ export default function Withdraw(props) {
     try {
       await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       await onNoteChange();
+      setShowContent(false);
       setRunning(false);
     } catch (err) {
       toast.success("#" + err.code + ", " + err.message);
+      setShowContent(false);
       setRunning(false);
     }
   }
@@ -145,6 +148,7 @@ export default function Withdraw(props) {
 
   const onNoteChange = async () => {
     if(note.substring(0, 6) !== "shaker") {
+      setShowContent(false);
       return;
     }
     try {
@@ -161,12 +165,14 @@ export default function Withdraw(props) {
       setEffectiveTimeString(dt.toLocaleDateString() + " " + dt.toLocaleTimeString());
       setRecipient(noteDetails.recipient);
       setLoading(false);
+      setShowContent(true);
     } catch (e) {
       toast.success("Note is wrong, can not get data");
       setDepositAmount(0);
       setBalance(0);
       setDepositTime('-');
       setLoading(false);
+      setShowContent(false);
     }
   }
 
@@ -195,69 +201,73 @@ export default function Withdraw(props) {
         </div>
         {supportWebAssembly ?
         <div>
-          <div className="font1">Paste your recipient:</div>
+          <div className="font1">Paste your cheque note {loading ? <FontAwesomeIcon icon={faSpinner} spin/> : ''}</div>
           <textarea className="recipient-input" onChange={(e) => handleInput(e.target.value)} value={hiddenNote}></textarea>
-          {/* <textarea className="hidden" onChange={(e) => handleInputHidden(e.target.value)} value={note}></textarea> */}
-          <div className="recipient-line">
-            <div className="key">Type</div>
-            <div className="value">{orderStatus === 2 ? '-': orderStatus === 1 ? 'Cheque to Order':'Cheque to Bearer'}</div>
-          </div>
-          <div className="recipient-line">
-            <div className="key">Deposit Amount</div>
-            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : formatAmount(depositAmount, 0)} {currency}</div>
-          </div>
-          <div className="recipient-line">
-            <div className="key">Current Balance</div>
-            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : formatAmount(balance, 0)} {currency}</div>
-          </div>
-          <div className="recipient-line">
-            <div className="key">Deposit Time</div>
-            <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositTime}</div>
-          </div>
 
-          {effectiveTime * 1000 > (new Date()).getTime() ? 
-          <div className="recipient-line">
-            <div className="key">Effective Time</div>
-            <div className="value"><FontAwesomeIcon icon={faLock} className="orange"/> {effectiveTimeString}</div>
-          </div>
-          : ''}
-
-          {/* <div className="separate-line"></div> */}
-
-          {effectiveTime * 1000 < (new Date()).getTime() ? 
+          {!showContent ? '':
           <div>
-          <div className="font1">Withdraw amount ({currency})</div>
-          <input className="withdraw-input" onChange={(e) => setWithdrawAmount(e.target.value)}/>
-          </div>
-          : ''}
+            <div className="recipient-line">
+              <div className="key">Type</div>
+              <div className="value">{orderStatus === 2 ? '-': orderStatus === 1 ? 'Cheque to Order':'Cheque to Bearer'}</div>
+            </div>
 
-          {effectiveTime * 1000 > (new Date()).getTime() && orderStatus === 0 ? '' :
-          <div>
-            <div className="font1">Withdraw address</div>
-            {orderStatus === 0 ? 
-              <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
-              :
-              <input className="withdraw-input withdraw-address" value={recipient} readOnly/>
+            <div className="recipient-line">
+              <div className="key">Deposit Amount</div>
+              <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : formatAmount(depositAmount, 0)} {currency}</div>
+            </div>
+
+            <div className="recipient-line">
+              <div className="key">Current Balance</div>
+              <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : formatAmount(balance, 0)} {currency}</div>
+            </div>
+
+            <div className="recipient-line">
+              <div className="key">Deposit Time</div>
+              <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : depositTime}</div>
+            </div>
+
+            {effectiveTime * 1000 > (new Date()).getTime() ? 
+            <div className="recipient-line">
+              <div className="key">Effective Time</div>
+              <div className="value"><FontAwesomeIcon icon={faLock} className="orange"/> {effectiveTimeString}</div>
+            </div>
+            : ''}
+
+            {effectiveTime * 1000 < (new Date()).getTime() ? 
+            <div>
+            <div className="font1">Withdraw amount ({currency})</div>
+            <input className="withdraw-input" onChange={(e) => setWithdrawAmount(e.target.value)}/>
+            </div>
+            : ''}
+
+            {effectiveTime * 1000 > (new Date()).getTime() && orderStatus === 0 ? '' :
+            <div>
+              <div className="font1">Withdraw address</div>
+              {orderStatus === 0 ? 
+                <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+                :
+                <input className="withdraw-input withdraw-address" value={recipient} readOnly/>
+              }
+            </div>
             }
-          </div>
-          }
 
-
-          {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) ?
-          running ? 
-          <div className="button-deposit unavailable">
-            <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Withdraw
-            <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
-          </div> :
-          <div className="button-deposit" onClick={withdraw}>
-            Withdraw
-          </div>
-          :
-          <div className="button-deposit unavailable">
-            Withdraw
-          </div>
+            {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) ?
+            running ? 
+            <div className="button-deposit unavailable">
+              <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Withdraw
+              <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
+            </div> :
+            <div className="button-deposit" onClick={withdraw}>
+              Withdraw
+            </div>
+            :
+            <div className="button-deposit unavailable">
+              Withdraw
+            </div>
+            }
+            <div className="empty-gap"></div>
+            </div>
           }
-          <div className="empty-gap"></div>
           </div>
         :
         <div className="loading"><FontAwesomeIcon icon={faFrown}/> This device don't have enough memory   for WebAssembly to calculate circuit, please use Desktop Browser such as Chrome or Firefox.

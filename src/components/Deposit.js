@@ -221,7 +221,7 @@ export default function Deposit(props) {
     }
   }
   const openOrderToCheque = () => {
-    console.log("make order to cheque");
+    console.log("Open order cheque");
     setOrderStatus(orderStatus == 0 ? 1 : 0);
   }
 
@@ -294,15 +294,11 @@ export default function Deposit(props) {
         :
         <div>
           <SelectBox 
-            status={selectStatus}
-            description="If divided into 3-5 parts to deposit."
-            changeSelectStatus={changeSelectStatus}
-          />
-          <SelectBox 
             status={effectiveTimeStatus}
             description="Set effective date and time"
             changeSelectStatus={changeEffectiveTimeStatus}
           />
+
           {effectiveTimeStatus == 1 ?
           <DateTimePicker 
             onChange={onEffectiveTimeChange} 
@@ -310,11 +306,13 @@ export default function Deposit(props) {
             calendarClassName="calendar"
             className="datetime-picker"
             clearIcon={null}
+            disableClock={true}
           />
           : ""}
+
           <SelectBox 
             status={orderStatus}
-            description="Make order to cheque"
+            description="Open order cheque"
             changeSelectStatus={openOrderToCheque}
           />
           {orderStatus === 1 ?
@@ -323,6 +321,13 @@ export default function Deposit(props) {
             <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
           </div>
           : ""}
+
+          <SelectBox 
+            status={selectStatus}
+            description="Separated into 3-5 parts to deposit"
+            changeSelectStatus={changeSelectStatus}
+          />
+
           <div className="button-deposit" onClick={deposit}>Deposit</div>
         </div>
         :
