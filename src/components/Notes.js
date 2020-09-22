@@ -13,13 +13,13 @@ import { confirmAlert } from 'react-confirm-alert'; // Import
 import './react-confirm-alert.css'; // Import css
 import "./style.css";
 
-export default function Cheques(props) {
+export default function Notes(props) {
   const {web3Context} = props;
   const {accounts, lib} = web3Context;
   const [cheques, setCheques] = useState([]);
   const [chequeNotes, setChequeNotes] = useState('');
   const [isEmpty, setIsEmpty] = useState(false);
-  const type = 0;
+  const type = 1;
   const web3 = lib;
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
@@ -178,6 +178,11 @@ export default function Cheques(props) {
       re.push(noteKeys[i] + ":" + noteArray[i]);
     }
     setChequeNotes(re.join(','));
+    // let arr = []
+    // for(let i = 0; i < depositArray.length; i++) {
+    //   arr.push(depositArray[i].note);
+    // }
+    // setChequeNotes(arr.join(','));
   }
   
   return(
@@ -188,7 +193,7 @@ export default function Cheques(props) {
         <div>
           {/* 显示证明列表 */}
           <div className="title-bar">
-            {type === 0 ? "Opened Cheques" : "My Notes"}
+            My Notes
           </div>
           <div className="cheque-container">
             {cheques.length > 0 ?
@@ -210,17 +215,17 @@ export default function Cheques(props) {
                 />
               )}
               <CopyToClipboard text={chequeNotes} onCopy={()=>{toast.success('All cheque notes have been copied.')}}>
-              <div className="button-deposit"><FontAwesomeIcon icon={faUpload}/> Export cheques</div>
+              <div className="button-deposit"><FontAwesomeIcon icon={faUpload}/> Export Notes</div>
               </CopyToClipboard>
               <div className="button-deposit" onClick={importCheques}><FontAwesomeIcon icon={faDownload}/> Import cheques</div>
               </div>
               :
               !isEmpty ? 
-                <div className="loading"><FontAwesomeIcon icon={faSpinner} spin/> Loading cheques...</div>
+                <div className="loading"><FontAwesomeIcon icon={faSpinner} spin/> Loading Notes...</div>
                 : 
                 <div>
                   <div className="loading">
-                    <FontAwesomeIcon icon={faFrown}/> No deposits and cheques. Press the left-bottom 'Deposit' button to add your first cheque.
+                    <FontAwesomeIcon icon={faFrown}/> No cheque notes recieved, you can save the note while you withdraw.
                   </div>
                   <div className="button-deposit" onClick={importCheques}><FontAwesomeIcon icon={faDownload}/> Import cheques</div>
                 </div>
@@ -239,7 +244,6 @@ export default function Cheques(props) {
     </div>
   )
 }
-
 
 function Cheque(props) {
   let dt = new Date(props.effectiveTime * 1000);

@@ -1,12 +1,13 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import "./style.css";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faFrown, faLock, faUnlock } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faFrown, faLock, faUnlock, faBookmark } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {ERC20ShakerAddress} from "../config.js";
 import {getNoteDetails, toWeiString, formatAmount} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
+import {saveNoteString} from "../utils/localstorage.js";
 
 export default function Withdraw(props) {
   const {web3Context} = props;
@@ -105,11 +106,11 @@ export default function Withdraw(props) {
     try {
       await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       await onNoteChange();
-      setShowContent(false);
+      // setShowContent(false);
       setRunning(false);
     } catch (err) {
       toast.success("#" + err.code + ", " + err.message);
-      setShowContent(false);
+      // setShowContent(false);
       setRunning(false);
     }
   }
@@ -190,6 +191,12 @@ export default function Withdraw(props) {
       return stars;
   }
 
+  const saveNotes = () => {
+    saveNoteString(accounts[0], note, 1);
+    toast.success("Your note has been saved");
+  }
+  //shaker-usdt-800-4-0xe2cdc32eb05c917940ec63042d5da5e6e079be9682e17c4262e9e8771e79f72bf7aefc3d4435027ee24f5b3e96545fb576a361f67bb9d8b4df08ba0fac21
+
   return(
     <div>
       <div className="deposit-background">
@@ -201,8 +208,12 @@ export default function Withdraw(props) {
         </div>
         {supportWebAssembly ?
         <div>
+          {!showContent ? "":
+          <div className="save-note-button" onClick={saveNotes}><FontAwesomeIcon icon={faBookmark}/>  Save Notes</div>
+          }
           <div className="font1">Paste your cheque note {loading ? <FontAwesomeIcon icon={faSpinner} spin/> : ''}</div>
           <textarea className="recipient-input" onChange={(e) => handleInput(e.target.value)} value={hiddenNote}></textarea>
+
 
           {!showContent ? '':
           <div>

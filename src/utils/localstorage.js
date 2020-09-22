@@ -12,28 +12,35 @@ function getRandomCode(length) {
   }
 }
 
-export const saveNoteString = (account, noteString) => {
-  const key = account + "_note_" + getRandomCode(32);
+export const saveNoteString = (account, noteString, type = 0) => {
+  const keyword = type === 0 ? "_note_" : "_recv_";
+  const key = account + keyword + getRandomCode(32);
   localStorage[key] = noteString;
   return key;
 }
 
-export const getNoteStrings = (account) => {
+export const getNoteStrings = (account, type) => {
   var keys = [];
   var values = [];
   for(let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if(checkNoteKeyFormat(key, account)) {
-      values.push(localStorage[key]);
-      keys.push(key);
+    if(type === 0) {
+      if(checkNoteKeyFormat(key, account, "note")) {
+        values.push(localStorage[key]);
+        keys.push(key);
+      }
+    } else {
+      if(checkNoteKeyFormat(key, account, "recv")) {
+        values.push(localStorage[key]);
+        keys.push(key);
+      }
     }
   }
   return [keys, values];
 }
-
-const checkNoteKeyFormat = (note, account) => {
+const checkNoteKeyFormat = (note, account, keyword) => {
   const noteKey = note.split('_');
-  if(noteKey[0] === account && noteKey[1] === "note") return true;
+  if(noteKey[0] === account && noteKey[1] === keyword) return true;
   else return false;
 }
 const checkNoteFormat = (note) => {

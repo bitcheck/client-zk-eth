@@ -235,20 +235,31 @@ body {
   display:flex;
   flex: 1;
 }
-.menu-button-left {
-  width: 33%;
+.menu-button-1of4 {
+  width: 25%;
+  color: #50BF3E;
+}
+.menu-button-1 {
+  /* width: 33%; */
   color: #50BF3E;
   /* background-color: red; */
 }
-.menu-button-middle {
-  width: 34%;
+.menu-button-2 {
+  /* width: 34%; */
   color: #50BF3E;
   border-left: 1px solid #50BF3E;
   border-right: 1px solid #50BF3E;
   /* background-color: white; */
 }
-.menu-button-right {
-  width: 33%;
+.menu-button-3 {
+  /* width: 34%; */
+  color: #50BF3E;
+  /* border-left: 1px solid #50BF3E; */
+  border-right: 1px solid #50BF3E;
+  /* background-color: white; */
+}
+.menu-button-4 {
+  /* width: 33%; */
   color: #50BF3E;
   /* background-color: blue; */
 }
@@ -258,7 +269,7 @@ body {
   margin-bottom: 5px;
 }
 .menu-text {
-  font-size: 0.9em;
+  font-size: 0.85em;
 }
 .unavailable {
   background-color: grey
@@ -406,4 +417,17 @@ body {
 }
 .calendar button {
   color: white;
+}
+.save-note-button {
+  background-color:#50BF3E;
+  width: 30%;
+  font-size: 0.9em;
+  text-align: center;
+  height: 30px;
+  line-height: 30px;
+  color: white;
+  border-radius: 5px;
+  float:right;
+  margin-right: 5%;
+  margin-top: -2px;
 }
