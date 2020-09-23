@@ -1,9 +1,9 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {ERC20ShakerAddress} from "../config.js";
-import {getNoteDetails, formatAmount, formatAccount, getNoteDetailsArray} from "../utils/web3.js";
+import {ERC20ShakerAddress, addressConfig, netId} from "../config.js";
+import {formatAmount, formatAccount, getNoteDetailsArray} from "../utils/web3.js";
 import {batchSaveNotes} from "../utils/localstorage.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy, faSpinner, faTrash, faFrown, faDownload, faUpload, faLock, faUnlockAlt} from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faSpinner, faTrash, faFrown, faDownload, faUpload, faLock } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {CopyToClipboard} from 'react-copy-to-clipboard';
@@ -23,7 +23,7 @@ export default function Cheques(props) {
   const web3 = lib;
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
-  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
+  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, addressConfig["net_"+netId].ERC20ShakerAddress)
 
  const requestAccess = useCallback(() => requestAuth(web3Context), []);
   const requestAuth = async web3Context => {
@@ -51,24 +51,24 @@ export default function Cheques(props) {
 
     // 调用本地localStorage存储
     const [noteKeys, noteArray] = getNoteStrings(accounts[0], type);
-
+    // console.log("0000", noteKeys, noteArray);
     if(noteArray.length === 0) {
       setCheques([]);
       setIsEmpty(true);
       return;
     }
 
-    // let depositArray = [];
-    // ###### 改成数组一次性获取
+    // 改成数组一次性获取
     let depositArray = await getNoteDetailsArray(noteKeys, noteArray, shaker, web3);
-
+ 
     // 老方法，需要一个一个从链上读取
+    // let depositArray = [];
     // for (let i = 0; i < noteArray.length; i++) {
     //   const noteDetails = await getNoteDetails(noteKeys[i], noteArray[i], shaker, web3);
     //   console.log(noteKeys[i], noteDetails);
     //   if(noteDetails !== null) depositArray.push(noteDetails);
     // }
-    if(depositArray.length === 0) {
+    if(depositArray.length === 0 || depositArray === null || depositArray === []) {
       setCheques([]);
       setIsEmpty(true);
     } else {
@@ -79,32 +79,32 @@ export default function Cheques(props) {
     }
   }
 
-  const eraseNoteKeyFromArray = (key) => {
-    let depositArray = cheques;
-    const length = depositArray.length;
-    for(let i = 0; i < depositArray.length; i++) {
-      if(key === depositArray[i].noteKey) {
-        if (i == 0) {
-          depositArray.shift(); //删除并返回数组的第一个元素
-          break;
-          // return depositArray;
-        }
-        else if (i == length - 1) {
-          depositArray.pop();  //删除并返回数组的最后一个元素
-          break;
-          // return depositArray;
-        }
-        else {
-          depositArray.splice(i, 1); //删除下标为i的元素
-          break;
-          // return depositArray;
-        }
-      }
-    }
-    console.log(depositArray);
-    setCheques(depositArray);
-    // return depositArray;
-  }
+  // const eraseNoteKeyFromArray = (key) => {
+  //   let depositArray = cheques;
+  //   const length = depositArray.length;
+  //   for(let i = 0; i < depositArray.length; i++) {
+  //     if(key === depositArray[i].noteKey) {
+  //       if (i === 0) {
+  //         depositArray.shift(); //删除并返回数组的第一个元素
+  //         break;
+  //         // return depositArray;
+  //       }
+  //       else if (i === length - 1) {
+  //         depositArray.pop();  //删除并返回数组的最后一个元素
+  //         break;
+  //         // return depositArray;
+  //       }
+  //       else {
+  //         depositArray.splice(i, 1); //删除下标为i的元素
+  //         break;
+  //         // return depositArray;
+  //       }
+  //     }
+  //   }
+  //   console.log(depositArray);
+  //   setCheques(depositArray);
+  //   // return depositArray;
+  // }
 
   /**
    * Erase the cheque note from the smart contract to keep it secret.

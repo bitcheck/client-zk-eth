@@ -1,8 +1,8 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {ERC20ShakerAddress, USDTAddress} from "../config.js";
+import {addressConfig, netId} from "../config.js";
 import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faCircle, faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faTimes, faFrown } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {toWeiString, long2Short, formatAmount, formatAccount, getGasPrice, getERC20Symbol} from "../utils/web3";
@@ -32,12 +32,14 @@ export default function Deposit(props) {
   const [ethBalance, setEthBalance] = useState(0);
   const [symbol, setSymbol] = useState('USDT');
   const [gasPrice, setGasPrice] = useState(0);
+  const [outOfGas, setOutOfGas] = useState(false);
 
   const web3 = lib;
   const erc20Json = require('../contracts/abi/ERC20.json')
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
+  const ERC20ShakerAddress = addressConfig["net_"+netId].ERC20ShakerAddress;
   const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
-  const erc20 = new web3.eth.Contract(erc20Json, USDTAddress);
+  const erc20 = new web3.eth.Contract(erc20Json, addressConfig["net_"+netId].USDTAddress);
 
   let noteCopied = false;
 
@@ -59,6 +61,14 @@ export default function Deposit(props) {
 
   const init = async () => {
     setLoading(true);
+    const ethBalance = web3.utils.fromWei(await web3.eth.getBalance(accounts[0]));
+    console.log(ethBalance)
+    if(parseInt(ethBalance) === 0) {
+      setOutOfGas(true);
+      return;
+    } else {
+      setOutOfGas(false);
+    }
     setIsApproved(await checkAllowance(depositAmount));
     setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
     setUsdtBalance(long2Short(await getERC20Balance(accounts[0]), decimals));
@@ -203,9 +213,14 @@ export default function Deposit(props) {
   }
 
   const checkAllowance = async(depositAmount) => {
-    let allowance = await erc20.methods.allowance(accounts[0], ERC20ShakerAddress).call({ from: accounts[0] });
-    allowance = long2Short(allowance, decimals);
-    return allowance >= depositAmount;
+    try {
+      let allowance = await erc20.methods.allowance(accounts[0], ERC20ShakerAddress).call({ from: accounts[0] });
+      allowance = long2Short(allowance, decimals);
+      return allowance >= depositAmount;
+    } catch (err) {
+      // Out of gas
+      return -999;
+    }
   }
 
   const setAllowance = async() => {
@@ -222,14 +237,14 @@ export default function Deposit(props) {
   }
   const openOrderToCheque = () => {
     console.log("Open order cheque");
-    setOrderStatus(orderStatus == 0 ? 1 : 0);
+    setOrderStatus(orderStatus === 0 ? 1 : 0);
   }
 
   const changeSelectStatus = (status) => {
     setSelectStatus(status);
   }
   const changeEffectiveTimeStatus = () => {
-    setEffectiveTimeStatus(effectiveTimeStatus == 0 ? 1 : 0);
+    setEffectiveTimeStatus(effectiveTimeStatus === 0 ? 1 : 0);
   }
   const onEffectiveTimeChange = (datetime) => {
     console.log(datetime);
@@ -241,7 +256,7 @@ export default function Deposit(props) {
     <div>
       <div className="deposit-background">
         <ToastContainer autoClose={3000}/>
-        {accounts && accounts.length> 0 ? 
+        {accounts && accounts.length > 0 ? 
         <div>
         <div className="title-bar">
           Deposit
@@ -262,92 +277,100 @@ export default function Deposit(props) {
           <div className="key">Gas Price</div>
           <div className="value">{formatAmount(gasPrice, 0)} GWei</div>
         </div>
-        <div className="font1">Select deposit amount</div>
-        <div className="button-line">
-          <SelectButton id="0" symbol={symbol} amount={depositAmounts[0]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="1" symbol={symbol} amount={depositAmounts[1]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
-        </div>
-        <div className="button-line">
-          <SelectButton id="2" symbol={symbol} amount={depositAmounts[2]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="3" symbol={symbol} amount={depositAmounts[3]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
-        </div>
-        <div className="button-line">
-          <SelectButton id="4" symbol={symbol} amount={depositAmounts[4]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="5" symbol={symbol} amount={depositAmounts[5]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
-        </div>
-        <div className="button-line">
-          <SelectButton id="6" symbol={symbol} amount={depositAmounts[6]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="7" symbol={symbol} amount={depositAmounts[7]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
-        </div>
-        <div className="button-line">
-          <SelectButton id="8" symbol={symbol} amount={depositAmounts[8]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
-          <SelectButton id="9" symbol={symbol} amount={depositAmounts[9]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
-        </div>
 
-        {isApproved ? 
-        loading ? 
+
+        {outOfGas ? <div className="font1"><FontAwesomeIcon icon={faFrown}/> Your ETH is not enough for Gas fee</div>
+: 
         <div>
-          <div className="button-deposit unavailable"><FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Please wait...
-        </div>
-          <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
-        </div> 
-        :
-        <div>
-          <SelectBox 
-            status={effectiveTimeStatus}
-            description="Set effective date and time"
-            changeSelectStatus={changeEffectiveTimeStatus}
-          />
-
-          {effectiveTimeStatus == 1 ?
-          <DateTimePicker 
-            onChange={onEffectiveTimeChange} 
-            value={new Date(effectiveTime * 1000)}
-            calendarClassName="calendar"
-            className="datetime-picker"
-            clearIcon={null}
-            disableClock={true}
-          />
-          : ""}
-
-          <SelectBox 
-            status={orderStatus}
-            description="Open order cheque"
-            changeSelectStatus={openOrderToCheque}
-          />
-          {orderStatus === 1 ?
-          <div className="order-to-cheque">
-            <div className="font1">Withdraw address:</div>
-            <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+          <div className="font1">Select deposit amount</div>
+          <div className="button-line">
+            <SelectButton id="0" symbol={symbol} amount={depositAmounts[0]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+            <SelectButton id="1" symbol={symbol} amount={depositAmounts[1]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
           </div>
-          : ""}
+          <div className="button-line">
+            <SelectButton id="2" symbol={symbol} amount={depositAmounts[2]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+            <SelectButton id="3" symbol={symbol} amount={depositAmounts[3]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          </div>
+          <div className="button-line">
+            <SelectButton id="4" symbol={symbol} amount={depositAmounts[4]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+            <SelectButton id="5" symbol={symbol} amount={depositAmounts[5]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          </div>
+          <div className="button-line">
+            <SelectButton id="6" symbol={symbol} amount={depositAmounts[6]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+            <SelectButton id="7" symbol={symbol} amount={depositAmounts[7]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          </div>
+          <div className="button-line">
+            <SelectButton id="8" symbol={symbol} amount={depositAmounts[8]} side="left" selectedId={selectedId} onSelected={buttonSelected}/>
+            <SelectButton id="9" symbol={symbol} amount={depositAmounts[9]} side="right" selectedId={selectedId} onSelected={buttonSelected}/>
+          </div>
 
-          <SelectBox 
-            status={selectStatus}
-            description="Separated into 3-5 parts to deposit"
-            changeSelectStatus={changeSelectStatus}
-          />
-
-          <div className="button-deposit" onClick={deposit}>Deposit</div>
-        </div>
-        :
-        loading ? 
-        <div>
-          <div className="button-approve unavailable"><FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Please wait...
+          {isApproved ? 
+          loading ? 
+          <div>
+            <div className="button-deposit unavailable"><FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Please wait...
+          </div>
+            <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
           </div> 
-          <div className="memo">After submiting transaction, you can check the wallet to see the result.
+          :
+          <div>
+            <SelectBox 
+              status={effectiveTimeStatus}
+              description="Set effective date and time"
+              changeSelectStatus={changeEffectiveTimeStatus}
+            />
+
+            {effectiveTimeStatus === 1 ?
+            <DateTimePicker 
+              onChange={onEffectiveTimeChange} 
+              value={new Date(effectiveTime * 1000)}
+              calendarClassName="calendar"
+              className="datetime-picker"
+              clearIcon={null}
+              disableClock={true}
+            />
+            : ""}
+
+            <SelectBox 
+              status={orderStatus}
+              description="Open order cheque"
+              changeSelectStatus={openOrderToCheque}
+            />
+            {orderStatus === 1 ?
+            <div className="order-to-cheque">
+              {/* <div className="font1">Withdraw address:</div> */}
+              <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+            </div>
+            : ""}
+
+            <SelectBox 
+              status={selectStatus}
+              description="Separated into 3-5 parts to deposit"
+              changeSelectStatus={changeSelectStatus}
+            />
+
+            <div className="button-deposit" onClick={deposit}>Deposit</div>
           </div>
-        </div>
-        :
-        <div className="button-approve" onClick={setAllowance}>Approve</div>
+          :
+          loading ? 
+          <div>
+            <div className="button-approve unavailable"><FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Please wait...
+            </div> 
+            <div className="memo">After submiting transaction, you can check the wallet to see the result.
+            </div>
+          </div>
+          :
+          <div className="button-approve" onClick={setAllowance}>Approve</div>
+          }
+          <div className="empty-gap"></div>
+          </div>
         }
-        <div className="empty-gap"></div>
         </div>
         : 
         <div>
           {/* <div className="connect-wallet">You have not connected to Wallet</div> */}
           <div className="button-connect-wallet" onClick={requestAccess}>Connect to wallet</div>
         </div>
+
       }
       </div>
     </div>

@@ -13,10 +13,23 @@ function getRandomCode(length) {
 }
 
 export const saveNoteString = (account, noteString, type = 0) => {
-  const keyword = type === 0 ? "_note_" : "_recv_";
-  const key = account + keyword + getRandomCode(32);
-  localStorage[key] = noteString;
-  return key;
+  const keyword = type === 0 ? "note" : "recv";
+  let has = false;
+  for(let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    const acc = key.split("_")[0];
+    const t = key.split("_")[1];
+    if(localStorage[key] === noteString && acc === account && keyword === t) {
+      has = true;
+      break;
+    }
+  }
+  console.log(noteString, has);
+  if(!has) {
+    const key = account + "_" + keyword + "_" + getRandomCode(32);
+    localStorage[key] = noteString;
+    return key;  
+  } else return 0;
 }
 
 export const getNoteStrings = (account, type) => {

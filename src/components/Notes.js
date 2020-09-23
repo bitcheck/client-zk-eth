@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {ERC20ShakerAddress} from "../config.js";
+import {addressConfig, netId} from "../config.js";
 import {getNoteDetails, formatAmount, formatAccount, getNoteDetailsArray} from "../utils/web3.js";
 import {batchSaveNotes} from "../utils/localstorage.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -23,7 +23,7 @@ export default function Notes(props) {
   const web3 = lib;
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
-  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
+  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, addressConfig["net_"+netId].ERC20ShakerAddress)
 
  const requestAccess = useCallback(() => requestAuth(web3Context), []);
   const requestAuth = async web3Context => {
@@ -58,17 +58,17 @@ export default function Notes(props) {
       return;
     }
 
-    // let depositArray = [];
-    // ###### 改成数组一次性获取
+    // 改成数组一次性获取
     let depositArray = await getNoteDetailsArray(noteKeys, noteArray, shaker, web3);
 
     // 老方法，需要一个一个从链上读取
+    // let depositArray = [];
     // for (let i = 0; i < noteArray.length; i++) {
     //   const noteDetails = await getNoteDetails(noteKeys[i], noteArray[i], shaker, web3);
     //   console.log(noteKeys[i], noteDetails);
     //   if(noteDetails !== null) depositArray.push(noteDetails);
     // }
-    if(depositArray.length === 0) {
+    if(depositArray.length === 0 || depositArray === null || depositArray === []) {
       setCheques([]);
       setIsEmpty(true);
     } else {
@@ -79,32 +79,32 @@ export default function Notes(props) {
     }
   }
 
-  const eraseNoteKeyFromArray = (key) => {
-    let depositArray = cheques;
-    const length = depositArray.length;
-    for(let i = 0; i < depositArray.length; i++) {
-      if(key === depositArray[i].noteKey) {
-        if (i == 0) {
-          depositArray.shift(); //删除并返回数组的第一个元素
-          break;
-          // return depositArray;
-        }
-        else if (i == length - 1) {
-          depositArray.pop();  //删除并返回数组的最后一个元素
-          break;
-          // return depositArray;
-        }
-        else {
-          depositArray.splice(i, 1); //删除下标为i的元素
-          break;
-          // return depositArray;
-        }
-      }
-    }
-    console.log(depositArray);
-    setCheques(depositArray);
-    // return depositArray;
-  }
+  // const eraseNoteKeyFromArray = (key) => {
+  //   let depositArray = cheques;
+  //   const length = depositArray.length;
+  //   for(let i = 0; i < depositArray.length; i++) {
+  //     if(key === depositArray[i].noteKey) {
+  //       if (i === 0) {
+  //         depositArray.shift(); //删除并返回数组的第一个元素
+  //         break;
+  //         // return depositArray;
+  //       }
+  //       else if (i === length - 1) {
+  //         depositArray.pop();  //删除并返回数组的最后一个元素
+  //         break;
+  //         // return depositArray;
+  //       }
+  //       else {
+  //         depositArray.splice(i, 1); //删除下标为i的元素
+  //         break;
+  //         // return depositArray;
+  //       }
+  //     }
+  //   }
+  //   console.log(depositArray);
+  //   setCheques(depositArray);
+  //   // return depositArray;
+  // }
 
   /**
    * Erase the cheque note from the smart contract to keep it secret.
@@ -193,7 +193,7 @@ export default function Notes(props) {
         <div>
           {/* 显示证明列表 */}
           <div className="title-bar">
-            My Notes
+            Recieved Cheques
           </div>
           <div className="cheque-container">
             {cheques.length > 0 ?

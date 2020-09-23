@@ -7,10 +7,10 @@ import Cheques from './components/Cheques.js';
 import Notes from './components/Notes.js';
 import Menu from './components/Menu.js';
 import {HashRouter, Route, Switch} from 'react-router-dom';
+import {defaultRPC, infuraId} from './config.js';
 
-const infuraProjectId = '3446259cb0e74d68b614f9a10328a368';
 function App() {
-  const web3Context = useWeb3(`wss://mainnet.infura.io/ws/v3/${infuraProjectId}`);
+  const web3Context = useWeb3(`wss://${defaultRPC}${infuraId}`);
   return (
   <div className="App">
     <div>

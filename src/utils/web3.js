@@ -2,85 +2,129 @@ import {parseNote} from "./zksnark.js";
 import {decimals} from "../config.js";
 const { GasPriceOracle } = require('gas-price-oracle');
 
-export const long2Short = (num, decimals) => {
-  return num / Math.pow(10, decimals);
-}
-
-export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, lib, account) => {
-  let commitmentHexArray = [];
-  let nullifierHexArray = [];
+export const loadWithdrawArray = async (noteArray, shaker, lib) => {
   let currencyArray = [];
   let amountArray = [];
   let netIdArray = [];
-  let depositInfo = [];
   let depositArray = [];
   try {
     for(let i = 0; i < noteArray.length; i++) {
       const { currency, amount, netId, deposit } = parseNote(noteArray[i]);
       depositArray.push(deposit);
-      commitmentHexArray.push(deposit.commitmentHex);
-      nullifierHexArray.push(deposit.nullifierHex);
       currencyArray.push(currency);
       amountArray.push(amount);
       netIdArray.push(netId);
     }
-    
-    // Load deposit data
-    const eventWhenHappened = await shaker.getPastEvents('Deposit', {
+    const events = await shaker.getPastEvents('Withdrawal', {
       fromBlock: 0,
       toBlock: 'latest',
-      filter: {
-        commitment: commitmentHexArray
-      }
     })
-    if( eventWhenHappened.length === 0) return null;
 
+    if( events.length === 0) return [];
     let re = [];
-    for(let i = 0; i < eventWhenHappened.length; i++) {
-      let noteData = {};
-      let withdrawData;
+    for(let i = 0; i < events.length; i++) {
       for(let j = 0; j < depositArray.length; j++) {
-        if(depositArray[j].commitmentHex === eventWhenHappened[i].returnValues.commitment) {
-          noteData = {
-            note: noteArray[j], 
-            noteKey: noteKeyArray[j], 
-            currency: currencyArray[j], 
-            amount: amountArray[j], 
-            netId: netIdArray[j] 
-          };
-          withdrawData = await loadWithdrawalData( {deposit: depositArray[j]}, shaker, lib);
-          break;
-        }
+        if(events[i].returnValues.nullifierHash !== depositArray[j].nullifierHex) continue;
+
+        var withdrawEvent = events[i];
+        const amount = withdrawEvent.returnValues.amount;
+        const fee = withdrawEvent.returnValues.fee
+        const { timestamp } = await lib.eth.getBlock(withdrawEvent.blockHash)
+        const withdrawalDate = new Date(timestamp * 1000)
+        re.push({
+          amount: long2Short(amount, decimals),
+          fee,
+          txHash: withdrawEvent.transactionHash,
+          to: withdrawEvent.returnValues.to,
+          nullifier: withdrawEvent.returnValues.nullifierHash,
+          time: withdrawalDate.toLocaleDateString() + " " + withdrawalDate.toLocaleTimeString(), 
+        })
       }
-      const { timestamp, orderStatus, recipient, effectiveTime, commitment } = eventWhenHappened[i].returnValues
-      const txHash = eventWhenHappened[i].transactionHash
-      // const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call({ from: account, gas: 1e6}) //没必要，去掉
-      const receipt = await lib.eth.getTransactionReceipt(txHash)
-      const depositDate = new Date(depositInfo.timestamp * 1000)
-      re.push({
-        noteKey: noteData.noteKey,
-        note: noteData.note,
-        currency: noteData.currency,
-        amount: noteData.amount,
-        netId: noteData.netId,
-        commitment,
-        txHash,
-        from: receipt.from,
-        time: depositDate.toLocaleDateString() + " " + depositDate.toLocaleTimeString(),
-        timestamp,
-        orderStatus, 
-        recipient,
-        effectiveTime,
-        withdrawArray: withdrawData === undefined ? [] : withdrawData.withdrawArray,
-        totalWithdraw: withdrawData === undefined ? 0 : withdrawData.totalWithdraw,
-      })
     }
-    if(re.length === 0) return null;
-    console.log("#####", re);
     return re;
   } catch(e) {
     console.error('loadDepositData', e)
-    return null;
+    return [];
+  }
+}
+
+export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, lib) => {
+  let currencyArray = [];
+  let amountArray = [];
+  let netIdArray = [];
+  let depositArray = [];
+  const withdrawals = await loadWithdrawArray(noteArray, shaker, lib);
+  try {
+    for(let i = 0; i < noteArray.length; i++) {
+      const { currency, amount, netId, deposit } = parseNote(noteArray[i]);
+      depositArray.push(deposit);
+      currencyArray.push(currency);
+      amountArray.push(amount);
+      netIdArray.push(netId);
+    }
+    console.log("1111")
+    // Load deposit data
+    const events = await shaker.getPastEvents('Deposit', {
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+
+    if( events.length === 0) return [];
+    console.log("2222", events)
+
+    let re = [];
+    for(let i = 0; i < events.length; i++) {
+      let noteData, depositEvent;
+      for(let j = 0; j < depositArray.length; j++) {
+        if(events[i].returnValues.commitment !== depositArray[j].commitmentHex) continue;
+        noteData = {
+          note: noteArray[j], 
+          noteKey: noteKeyArray[j], 
+          currency: currencyArray[j], 
+          amount: amountArray[j], 
+          netId: netIdArray[j] 
+        };
+        depositEvent = events[i];
+
+        let totalWithdraw = 0;
+        let withdrawArray = [];
+        for(let k = 0; k < withdrawals.length; k++) {
+          if(withdrawals[k].nullifier === depositArray[j].nullifierHex) {
+            totalWithdraw += withdrawals[k].amount;
+            withdrawArray.push(withdrawals[k]);
+          }
+        }
+        // console.log("3333", depositEvent)
+        const { timestamp, orderStatus, recipient, effectiveTime, commitment } = depositEvent.returnValues
+        const txHash = depositEvent.transactionHash
+        // const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call({ from: account, gas: 1e6}) //没必要，去掉
+        const receipt = await lib.eth.getTransactionReceipt(txHash)
+        const depositDate = new Date(timestamp * 1000)
+        // console.log(depositDate, noteData, timestamp, orderStatus, recipient, effectiveTime, commitment);
+        re.push({
+          noteKey: noteData.noteKey,
+          note: noteData.note,
+          currency: noteData.currency,
+          amount: noteData.amount,
+          netId: noteData.netId,
+          commitment,
+          txHash,
+          from: receipt.from,
+          time: depositDate.toLocaleDateString() + " " + depositDate.toLocaleTimeString(),
+          timestamp,
+          orderStatus, 
+          recipient,
+          effectiveTime,
+          withdrawArray,
+          totalWithdraw,
+        })
+      }
+    }
+    console.log("4444", re)
+    return re;
+  } catch(e) {
+    console.error('loadDepositData', e)
+    return [];
   }
 }
 
@@ -135,8 +179,6 @@ export async function loadDepositData({ deposit }, shaker, lib, account) {
   }
 }
 
-export const toWeiString = num => num + "0".repeat(decimals);//"000000000000000000";
-
 export async function loadWithdrawalData({ deposit }, shaker, lib) {
   try {
     const events = await await shaker.getPastEvents('Withdrawal', {
@@ -147,7 +189,6 @@ export async function loadWithdrawalData({ deposit }, shaker, lib) {
     const withdrawEvents = events.filter((event) => {
       return event.returnValues.nullifierHash === deposit.nullifierHex
     })
-
     let withdrawArray = [];
     let totalWithdraw = 0;
     // console.log(withdrawEvents);
@@ -200,3 +241,10 @@ export async function getGasPrice() {
 export const getERC20Symbol = async(contract) => {
   return await contract.methods.symbol().call();
 }
+
+export const long2Short = (num, decimals) => {
+  return num / Math.pow(10, decimals);
+}
+
+export const toWeiString = num => num + "0".repeat(decimals);
+

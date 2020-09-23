@@ -31,7 +31,7 @@ export default function Menu() {
         <div className="menu-icon">
         <FontAwesomeIcon icon={faBookmark} />
         </div>
-        <div className="menu-text">Notes</div>
+        <div className="menu-text">Wallet</div>
       </div>
     </div>
   )

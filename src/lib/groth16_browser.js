@@ -1,7 +1,7 @@
 import worker from './groth16.worker.js';
 import WebWorker from './WebWorker';
 
-/* globals WebAssembly, Blob, Worker, navigator, Promise, window */
+/* globals WebAssembly, navigator, Promise, window */
 const bigInt = require("big-integer");
 const groth16_wasm = require("websnark/build/groth16_wasm");
 const assert = require("assert");

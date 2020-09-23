@@ -1,13 +1,14 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import "./style.css";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faFrown, faLock, faUnlock, faBookmark } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faFrown, faLock, faBookmark, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {ERC20ShakerAddress} from "../config.js";
+import {addressConfig, netId} from "../config.js";
 import {getNoteDetails, toWeiString, formatAmount} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
 import {saveNoteString} from "../utils/localstorage.js";
+import DateTimePicker from 'react-datetime-picker';
 
 export default function Withdraw(props) {
   const {web3Context} = props;
@@ -30,16 +31,22 @@ export default function Withdraw(props) {
   const [recipient, setRecipient] = useState('');
   const [showContent, setShowContent] = useState(false);
 
+  const [endorseEffectiveTimeStatus, setEndorseEffectiveTimeStatus] = useState(0);
+  const [endorseEffectiveTime, setEndorseEffectiveTime] = useState(parseInt((new Date()).valueOf() / 1000));
+  const [endorseOrderStatus, setEndorseOrderStatus] = useState(0);//0- 无记名支票，1- 记名支票
+  const [endorseAmountStatus, setEndorseAmountStatus] = useState(0);
+  const [endorseAmount, setEndorseAmount] = useState(0);
+  const [endorseAddress, setEndorseAddress] = useState('');
+  const [endorseUI, setEndorseUI] = useState(false);
+
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
-  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
+  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, addressConfig["net_"+netId].ERC20ShakerAddress)
   let suportWebAssembly = false;
 
   const checkWebAssemblySupport = () => {
     try {
       new WebAssembly.Memory({initial: 5000});
-      console.log("====AAA====");
     } catch (e) {
-      console.log("====BBB====");
       setSupportWebAssembly(false);
     }
   }
@@ -144,7 +151,7 @@ export default function Withdraw(props) {
     return true;
   }
   useEffect(() => {
-    onNoteChange();
+    if(note !== undefined && note !== "") onNoteChange();
   }, [note]);
 
   const onNoteChange = async () => {
@@ -152,6 +159,7 @@ export default function Withdraw(props) {
       setShowContent(false);
       return;
     }
+    saveNotes();//Save the note automatically
     try {
       setLoading(true);
       const noteDetails = await getNoteDetails(0, note, shaker, web3, accounts[0]);
@@ -193,10 +201,29 @@ export default function Withdraw(props) {
 
   const saveNotes = () => {
     saveNoteString(accounts[0], note, 1);
-    toast.success("Your note has been saved");
+    // toast.success("Your note has been saved, you can find it by pressing Notes button");
   }
-  //shaker-usdt-800-4-0xe2cdc32eb05c917940ec63042d5da5e6e079be9682e17c4262e9e8771e79f72bf7aefc3d4435027ee24f5b3e96545fb576a361f67bb9d8b4df08ba0fac21
 
+  const onEndorseEffectiveTimeChange = (datetime) => {
+    console.log(datetime);
+    const timeStamp = (new Date(datetime).getTime()) / 1000;
+    console.log(timeStamp);
+    setEndorseEffectiveTime(timeStamp);
+  }
+  const openEndorseNote = () => {
+    setEndorseUI(!endorseUI);
+  }
+
+  //shaker-usdt-800-4-0xe2cdc32eb05c917940ec63042d5da5e6e079be9682e17c4262e9e8771e79f72bf7aefc3d4435027ee24f5b3e96545fb576a361f67bb9d8b4df08ba0fac21
+  const endorse = () => {
+    // #####
+    console.log("背书开始", endorseAddress, endorseAmount, endorseEffectiveTime);
+
+  }
+
+  const changeEndorseEffectiveTimeStatus = () => setEndorseEffectiveTimeStatus(endorseEffectiveTimeStatus === 0 ? 1 : 0);
+  const changeEndorseOrderStatus = () => setEndorseOrderStatus(endorseOrderStatus === 0 ? 1 : 0)
+  const changeEndorseAmountStatus = () => setEndorseAmountStatus(endorseAmountStatus === 0 ? 1 : 0);
   return(
     <div>
       <div className="deposit-background">
@@ -208,9 +235,9 @@ export default function Withdraw(props) {
         </div>
         {supportWebAssembly ?
         <div>
-          {!showContent ? "":
+          {/* {!showContent ? "":
           <div className="save-note-button" onClick={saveNotes}><FontAwesomeIcon icon={faBookmark}/>  Save Notes</div>
-          }
+          } */}
           <div className="font1">Paste your cheque note {loading ? <FontAwesomeIcon icon={faSpinner} spin/> : ''}</div>
           <textarea className="recipient-input" onChange={(e) => handleInput(e.target.value)} value={hiddenNote}></textarea>
 
@@ -240,7 +267,7 @@ export default function Withdraw(props) {
             {effectiveTime * 1000 > (new Date()).getTime() ? 
             <div className="recipient-line">
               <div className="key">Effective Time</div>
-              <div className="value"><FontAwesomeIcon icon={faLock} className="orange"/> {effectiveTimeString}</div>
+              <div className="value"><FontAwesomeIcon icon={faLock} className="orange"/>  {effectiveTimeString}</div>
             </div>
             : ''}
 
@@ -276,6 +303,69 @@ export default function Withdraw(props) {
               Withdraw
             </div>
             }
+
+            {/* Endorsement Start */}
+            {balance <= 0 ? '' :
+            <SelectBox 
+              status={endorseUI}
+              description="Don't withdraw, transfer the note"
+              changeSelectStatus={openEndorseNote}
+            />
+            }
+
+            {!endorseUI || balance <= 0? '' : 
+              <div>
+
+              <SelectBox 
+                status={endorseAmountStatus}
+                description="Set transfer amount"
+                changeSelectStatus={changeEndorseAmountStatus}
+              />
+              {endorseAmountStatus === 1 ?
+              <div className="order-to-cheque">
+                {/* <div className="font1">Endorsed Amount</div> */}
+                <input className="withdraw-input" value={endorseAmount} onChange={(e) => setEndorseAmount(e.target.value)}/>
+              </div>
+              : ""}
+
+
+              <SelectBox 
+                status={endorseEffectiveTimeStatus}
+                description="Set effective date and time"
+                changeSelectStatus={changeEndorseEffectiveTimeStatus}
+              />
+
+              {endorseEffectiveTimeStatus === 1 ?
+              <DateTimePicker 
+                onChange={onEndorseEffectiveTimeChange} 
+                value={new Date(endorseEffectiveTime * 1000)}
+                calendarClassName="calendar"
+                className="datetime-picker"
+                clearIcon={null}
+                disableClock={true}
+              />
+              : ""}
+
+              <SelectBox 
+                status={endorseOrderStatus}
+                description="Transfer the cheque to order"
+                changeSelectStatus={changeEndorseOrderStatus}
+              />
+              {endorseOrderStatus === 1 ?
+              <div className="order-to-cheque">
+                {/* <div className="font1">Withdraw address:</div> */}
+                <input className="withdraw-input withdraw-address" value={endorseAddress} onChange={(e) => setEndorseAddress(e.target.value)}/>
+              </div>
+              : ""}
+
+              <div className="button-deposit" onClick={endorse}>
+                Transfer note
+              </div>
+
+              </div>
+            }
+            {/* Endorsement Start */}
+
             <div className="empty-gap"></div>
             </div>
           }
@@ -297,3 +387,25 @@ export default function Withdraw(props) {
 }
 
 
+function SelectBox(props) {
+  const [status, setStatus] = useState(props.status);
+
+  const onClick = () => {
+    const newStatus = status === 1 ? 0 : 1;
+    props.changeSelectStatus(newStatus);
+    setStatus(newStatus);
+  }
+
+  return (
+    <div className="select-separate">
+      <div className="select-box" onClick={onClick}>
+        <div className="selector">
+          {status === 1 ? 
+          <FontAwesomeIcon icon={faTimes}/>
+          : ''}
+          </div>
+      </div>
+      <div className="description" onClick={onClick}>{props.description}</div>
+    </div>
+  )
+}
