@@ -98,7 +98,6 @@ export async function generateProof({ deposit, recipient, relayerAddress = 0, fe
     toHex(input.relayer, 20),
     toHex(input.fee),
     toHex(input.refund), //通过查找deposit时的金额发送，这个参数暂时不用，但是仍旧参与零知识证明计算，并传给合约
-    toHex(deposit.commitmentHex) //通过commitment在合约中找到原来保存时的金额与收款人
   ]
   return { proof, args }
 }

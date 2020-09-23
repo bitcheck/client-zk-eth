@@ -6,7 +6,7 @@ export const addressConfig = {
   net_2000: {
     // Localhost ganache
     USDTAddress: "0x459DcF5F0b3CAD48D28A465ffcDd844C2c2D630a",
-    ERC20ShakerAddress: "0x758726b4585CA698943a8c037334fd6C75E51e02",
+    ERC20ShakerAddress: "0xcC543cb62e5EBEb5460E72B1749c8A2173836537",
     ETHShakerAddress: "0x6D1Af6e1654820d1550e991A03F49409888297D7",
   },
   net_4: {

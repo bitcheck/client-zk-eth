@@ -248,3 +248,13 @@ export const long2Short = (num, decimals) => {
 
 export const toWeiString = num => num + "0".repeat(decimals);
 
+export const getNoteShortStrings = (noteStrings) => {
+  let re = [];
+  for(let i = 0; i < noteStrings.length; i++) {
+    re.push(noteStrings[i].substring(0, 40) + '...');
+  }
+  return re;
+}
+export const getNoteShortString = (noteString) => {
+  return noteString.substring(0, 40) + '...';
+}

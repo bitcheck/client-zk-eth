@@ -5,10 +5,13 @@ import { faSpinner, faFrown, faLock, faBookmark, faTimes } from '@fortawesome/fr
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {addressConfig, netId} from "../config.js";
-import {getNoteDetails, toWeiString, formatAmount} from "../utils/web3.js";
+import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
-import {saveNoteString} from "../utils/localstorage.js";
+import {saveNoteString, eraseNoteString} from "../utils/localstorage.js";
 import DateTimePicker from 'react-datetime-picker';
+import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
+import {CopyToClipboard} from 'react-copy-to-clipboard';
+import { confirmAlert } from 'react-confirm-alert'; // Import
 
 export default function Withdraw(props) {
   const {web3Context} = props;
@@ -24,6 +27,7 @@ export default function Withdraw(props) {
   const [hiddenNote, setHiddenNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [endorsing, setEndorsing] = useState(false);
   const [supportWebAssembly, setSupportWebAssembly] = useState(true);
   const [orderStatus, setOrderStatus] = useState(2);
   const [effectiveTime, setEffectiveTime] = useState(0);
@@ -36,12 +40,17 @@ export default function Withdraw(props) {
   const [endorseOrderStatus, setEndorseOrderStatus] = useState(0);//0- 无记名支票，1- 记名支票
   const [endorseAmountStatus, setEndorseAmountStatus] = useState(0);
   const [endorseAmount, setEndorseAmount] = useState(0);
+  const [endorseAddressStatus, setEndorseAddressStatus] = useState(0);
   const [endorseAddress, setEndorseAddress] = useState('');
   const [endorseUI, setEndorseUI] = useState(false);
+
+  const [gasPrice, setGasPrice] = useState(0);
+  const [ethBalance, setEthBalance] = useState(0);
 
   const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
   const shaker = new web3.eth.Contract(erc20ShakerJson.abi, addressConfig["net_"+netId].ERC20ShakerAddress)
   let suportWebAssembly = false;
+  let noteCopied = false;
 
   const checkWebAssemblySupport = () => {
     try {
@@ -79,49 +88,156 @@ export default function Withdraw(props) {
       console.log(accounts[0]);
       // initProvingKey();
       setWithdrawAddress(accounts[0]);
+      init();
       console.log("Withdraw");
     }
   },[accounts])
 
+  const init = async () => {
+    setGasPrice(await getGasPrice());
+    setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
+
+  }
   const requestAccess = useCallback(() => requestAuth(web3Context), []);
 
-  const withdraw = async () => {
-    // console.log(withdrawAmount, withdrawAddress, currency);
-    if(!inputValidate()) return;
-
-    setRunning(true);
-    // Send to smart contract
-    const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
+  const getWithdrawProof = async (deposit, recipient, fee, amount) => {
     const url = getUrl();
     const proving_key = await (await fetch(`${url}/circuits/withdraw_proving_key.bin`)).arrayBuffer();
     // console.log("proving_key", proving_key);
 
     const { proof, args } = await generateProof({ 
       deposit, 
-      recipient: withdrawAddress, 
-      fee: 0,
-      refund: toWeiString(parseInt(withdrawAmount)),
+      recipient, 
+      fee,
+      refund: toWeiString(parseInt(amount)),
     }, 
       shaker, 
       proving_key,       
       accounts[0]
     );
-
-    // console.log('Submitting withdraw transaction', toWeiString(withdrawAmount));
+    return { proof, args };
+  }
+  const withdraw = async () => {
+    // console.log(withdrawAmount, withdrawAddress, currency);
+    if(!inputValidate()) return;
+    setRunning(true);
+    const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
+    const { proof, args } = await getWithdrawProof(deposit, withdrawAddress, 0, withdrawAmount);
+    args.push(deposit.commitmentHex);
     const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
     console.log("Estimate GAS", gas);
     try {
       await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       await onNoteChange();
-      // setShowContent(false);
       setRunning(false);
     } catch (err) {
       toast.success("#" + err.code + ", " + err.message);
-      // setShowContent(false);
       setRunning(false);
     }
   }
+// 0x6ebbc3d0Ac2553Cbe610359f4ffbBdddB8Cbeaed
+  const endorse = async (currentNote) => {
+    noteCopied = false;
+    console.log("背书开始", endorseAddress, endorseAmount, endorseEffectiveTime);
+    if(!endorseInputValidate()) return;
 
+    const withdrawAddr = endorseOrderStatus === 1 ? endorseAddress : accounts[0];
+    setEndorsing(true);
+    const { deposit } = parseNote(currentNote) //从NOTE中解析金额/币种/网络/证明
+    const { proof, args } = await getWithdrawProof(deposit, withdrawAddr, endorseOrderStatus, endorseAmount);
+
+    // Generate new commitment
+    const newDeposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
+    const note = toHex(newDeposit.preimage, 62) //获取零知识证明
+    const noteString = `shaker-${currency.toLowerCase()}-${endorseAmount}-${netId}-${note}` //零知识证明Note
+    const et = endorseEffectiveTimeStatus === 1 ? endorseEffectiveTime : effectiveTime;
+    args.push(deposit.commitmentHex, newDeposit.commitmentHex, et);
+    console.log("======", args);
+    const gas = await shaker.methods.endorse(proof, ...args).estimateGas({ from: accounts[0], gas: 10e6});
+    console.log("Estimate GAS", gas);
+
+    const noteShortString = getNoteShortString(noteString);
+    console.log("note", noteShortString);
+
+    // Open dialog confirm
+    confirmAlert({
+      customUI: ({ onClose }) => {
+        return (
+          <div className='confirm-box'>
+            <h1>ATTENSION!!!</h1>
+            <p>Here are new cheques notes, you can send them to your reciever or keep with you in safe place. Anybody can use these notes to withdraw the deposit. </p>
+            <div className='note-display'>{noteShortString}</div>
+            <CopyToClipboard text={noteString} onCopy={()=>onCopyNoteClick()}>
+              <div className='copy-notes-button'>Copy all notes and save</div>
+            </CopyToClipboard>
+            <p>Estimated GAS Fee: {(gas * gasPrice * 1.1 / 1e9).toFixed(6)} ETH</p>
+            {orderStatus === 1 ? <div><p>Recipient: {formatAccount(withdrawAddress)}</p></div> : ""}
+            <button className='confirm-button'
+              onClick={() => {
+                if(!noteCopied) {
+                  toast.success('Please copy all the notes before you continue.');
+                  return;
+                }
+                // Check eth for gas is enough?
+                if(gas * gasPrice * 1.1 / 1e9 > parseFloat(ethBalance)) {
+                  toast.success('Your ETH balance is not enough for the GAS Fee');
+                  return;
+                }
+                doEndorse(proof, args, noteString, gas); 
+                onClose();
+              }}>Continue</button>
+            <button className="cancel-button"
+              onClick={() => {
+                onClose();
+                setLoading(false);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        );
+      }
+    });
+  }
+  
+  const doEndorse = async (proof, args, noteString, gas) => {
+    let key;
+    try {
+      key = saveNoteString(accounts[0], noteString);
+      await shaker.methods.endorse(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1)});
+      // setLoading(false);
+      await onNoteChange();
+      setEndorsing(false);
+    } catch (err) {
+      console.log(err);
+      toast.success("#" + err.code + ", " + err.message);
+      // 如果出错，删除刚刚生成的LocalStorage key
+      eraseNoteString(key);
+      setEndorsing(false);
+      // setLoading(false);
+    }
+
+  }
+
+  const onCopyNoteClick = () => {
+    noteCopied = true;
+    toast.success("Notes have been copied, please save it and continue.");
+  }
+
+  const endorseInputValidate = () => {
+    // ######
+    console.log("&&&&&", orderStatus, accounts[0], recipient);
+    if(orderStatus === 1 && accounts[0] !== recipient) {
+      toast.success("You must be the reciever of current cheque");
+      return false;
+    }
+
+    if(endorseOrderStatus === 1 && endorseAddress === "") {
+      toast.success("Please input the right address of transfer to");
+      return false;
+    }
+    return true;
+  }
   /**
    * Check integer
    */
@@ -173,6 +289,7 @@ export default function Withdraw(props) {
       const dt = new Date(noteDetails.effectiveTime * 1000);
       setEffectiveTimeString(dt.toLocaleDateString() + " " + dt.toLocaleTimeString());
       setRecipient(noteDetails.recipient);
+      setEndorseAmount(noteDetails.amount - noteDetails.totalWithdraw);
       setLoading(false);
       setShowContent(true);
     } catch (e) {
@@ -214,16 +331,9 @@ export default function Withdraw(props) {
     setEndorseUI(!endorseUI);
   }
 
-  //shaker-usdt-800-4-0xe2cdc32eb05c917940ec63042d5da5e6e079be9682e17c4262e9e8771e79f72bf7aefc3d4435027ee24f5b3e96545fb576a361f67bb9d8b4df08ba0fac21
-  const endorse = () => {
-    // #####
-    console.log("背书开始", endorseAddress, endorseAmount, endorseEffectiveTime);
-
-  }
-
   const changeEndorseEffectiveTimeStatus = () => setEndorseEffectiveTimeStatus(endorseEffectiveTimeStatus === 0 ? 1 : 0);
   const changeEndorseOrderStatus = () => setEndorseOrderStatus(endorseOrderStatus === 0 ? 1 : 0)
-  const changeEndorseAmountStatus = () => setEndorseAmountStatus(endorseAmountStatus === 0 ? 1 : 0);
+  // const changeEndorseAddressStatus = () => setEndorseAddressStatus(endorseAddressStatus === 0 ? 1 : 0);
   return(
     <div>
       <div className="deposit-background">
@@ -313,28 +423,29 @@ export default function Withdraw(props) {
             />
             }
 
-            {!endorseUI || balance <= 0? '' : 
+            {!endorseUI || balance <= 0 ? '' : 
               <div>
 
-              <SelectBox 
+              {/* <SelectBox 
                 status={endorseAmountStatus}
                 description="Set transfer amount"
                 changeSelectStatus={changeEndorseAmountStatus}
               />
-              {endorseAmountStatus === 1 ?
+              {endorseAmountStatus === 1 ? */}
               <div className="order-to-cheque">
-                {/* <div className="font1">Endorsed Amount</div> */}
+                <div className="font1">Endorsed Amount</div>
                 <input className="withdraw-input" value={endorseAmount} onChange={(e) => setEndorseAmount(e.target.value)}/>
               </div>
-              : ""}
+              {/* : ""} */}
 
-
+              {/* ###### */}
+              {effectiveTime * 1000 > (new Date()).getTime() ? "" :
               <SelectBox 
                 status={endorseEffectiveTimeStatus}
                 description="Set effective date and time"
                 changeSelectStatus={changeEndorseEffectiveTimeStatus}
               />
-
+              }
               {endorseEffectiveTimeStatus === 1 ?
               <DateTimePicker 
                 onChange={onEndorseEffectiveTimeChange} 
@@ -358,10 +469,19 @@ export default function Withdraw(props) {
               </div>
               : ""}
 
-              <div className="button-deposit" onClick={endorse}>
-                Transfer note
-              </div>
 
+              {balance > 0 && endorseAmount <= balance && !loading && endorseAmount > 0 && intValidate(endorseAmount) ?
+              endorsing ? 
+              <div className="button-deposit unavailable">
+                <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Transferring
+                <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
+              </div> :
+              <div className="button-deposit" onClick={() => endorse(note)}>
+                  Transfer note
+              </div>
+              :
+              <div className="button-deposit unavailable">Transfer</div>
+              }
               </div>
             }
             {/* Endorsement Start */}

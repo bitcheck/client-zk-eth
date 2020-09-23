@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faTimes, faFrown } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {toWeiString, long2Short, formatAmount, formatAccount, getGasPrice, getERC20Symbol} from "../utils/web3";
+import {toWeiString, long2Short, formatAmount, formatAccount, getGasPrice, getERC20Symbol, getNoteShortStrings} from "../utils/web3";
 import {getCombination} from "../utils/devide.js";
 import {depositAmounts, decimals} from "../config.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage";
@@ -70,7 +70,7 @@ export default function Deposit(props) {
       setOutOfGas(false);
     }
     setIsApproved(await checkAllowance(depositAmount));
-    setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
+    setEthBalance(ethBalance);
     setUsdtBalance(long2Short(await getERC20Balance(accounts[0]), decimals));
     setGasPrice(await getGasPrice());
     setSymbol(await getERC20Symbol(erc20));
@@ -184,13 +184,6 @@ export default function Deposit(props) {
   const onCopyNoteClick = () => {
     noteCopied = true;
     toast.success("Notes have been copied, please save it and continue.");
-  }
-  const getNoteShortStrings = (noteStrings) => {
-    let re = [];
-    for(let i = 0; i < noteStrings.length; i++) {
-      re.push(noteStrings[i].substring(0, 40) + '...');
-    }
-    return re;
   }
 
   const doDeposit = async(amounts, commitments, noteStrings, gas) => {
