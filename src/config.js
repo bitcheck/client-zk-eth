@@ -1,6 +1,6 @@
 export const defaultRPC = "mainnet.infura.io/ws/v3/";
 export const infuraId = "3446259cb0e74d68b614f9a10328a368";
-export const netId = 2000;
+export const netId = 4;
 
 export const addressConfig = {
   net_2000: {
@@ -12,7 +12,7 @@ export const addressConfig = {
   net_4: {
     // Rinkeby
     USDTAddress: "0x79C6B89D0C939e6D1C45Aa384C321bf668752624",
-    ERC20ShakerAddress: "0x38A58Ee8A0e4361a90789a1DBdDBFA8Fcf91ACCA",
+    ERC20ShakerAddress: "0x3Dc974d1720360100565437B420C7dfdCccb4296",
     ETHShakerAddress: "0x2794669bd766AB95fD6F2Ed9A4c534b12c809041",
   }
 }

@@ -418,7 +418,7 @@ export default function Withdraw(props) {
             {balance <= 0 ? '' :
             <SelectBox 
               status={endorseUI}
-              description="Don't withdraw, transfer the note"
+              description="Don't want to withdraw, transfer it"
               changeSelectStatus={openEndorseNote}
             />
             }
@@ -433,7 +433,7 @@ export default function Withdraw(props) {
               />
               {endorseAmountStatus === 1 ? */}
               <div className="order-to-cheque">
-                <div className="font1">Endorsed Amount</div>
+                <div className="font1">Transfer Amount</div>
                 <input className="withdraw-input" value={endorseAmount} onChange={(e) => setEndorseAmount(e.target.value)}/>
               </div>
               {/* : ""} */}

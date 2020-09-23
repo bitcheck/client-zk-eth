@@ -322,7 +322,7 @@ body {
 .select-separate {
   display:flex;
   flex: 1;
-  margin-top: 10px;
+  margin-top: 15px;
   margin-left: 4%;
   margin-bottom: 15px;
 }

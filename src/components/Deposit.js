@@ -63,7 +63,7 @@ export default function Deposit(props) {
     setLoading(true);
     const ethBalance = web3.utils.fromWei(await web3.eth.getBalance(accounts[0]));
     console.log(ethBalance)
-    if(parseInt(ethBalance) === 0) {
+    if(parseFloat(ethBalance) === 0.1) {
       setOutOfGas(true);
       return;
     } else {
@@ -272,7 +272,7 @@ export default function Deposit(props) {
         </div>
 
 
-        {outOfGas ? <div className="font1"><FontAwesomeIcon icon={faFrown}/> Your ETH is not enough for Gas fee</div>
+        {outOfGas ? <div className="font1"><FontAwesomeIcon icon={faFrown}/> Your ETH is not enough for Gas fee, suggest to have 0.5ETH at least</div>
 : 
         <div>
           <div className="font1">Select deposit amount</div>
