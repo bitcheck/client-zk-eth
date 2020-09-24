@@ -84,6 +84,7 @@ export async function generateProof({ deposit, recipient, relayerAddress = 0, fe
     pathElements: path_elements,
     pathIndices: path_index,
   }
+  //323702476566699957412192036552364646819626676275785661415821372587107935162n
   console.log('Generating SNARK proof')
   console.time('Proof time')
   const groth16 = await buildGroth16();

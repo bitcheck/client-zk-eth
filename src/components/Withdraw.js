@@ -37,9 +37,9 @@ export default function Withdraw(props) {
   const [endorseEffectiveTimeStatus, setEndorseEffectiveTimeStatus] = useState(0);
   const [endorseEffectiveTime, setEndorseEffectiveTime] = useState(parseInt((new Date()).valueOf() / 1000));
   const [endorseOrderStatus, setEndorseOrderStatus] = useState(0);//0- 无记名支票，1- 记名支票
-  const [endorseAmountStatus, setEndorseAmountStatus] = useState(0);
+  // const [endorseAmountStatus, setEndorseAmountStatus] = useState(0);
   const [endorseAmount, setEndorseAmount] = useState(0);
-  const [endorseAddressStatus, setEndorseAddressStatus] = useState(0);
+  // const [endorseAddressStatus, setEndorseAddressStatus] = useState(0);
   const [endorseAddress, setEndorseAddress] = useState('');
   const [endorseUI, setEndorseUI] = useState(false);
 
@@ -288,7 +288,7 @@ export default function Withdraw(props) {
       setEffectiveTime(noteDetails.effectiveTime * 1);
       const dt = new Date(noteDetails.effectiveTime * 1000);
       setEffectiveTimeString(dt.toLocaleDateString() + " " + dt.toLocaleTimeString());
-      setRecipient(noteDetails.recipient);
+      setRecipient(noteDetails.orderStatus * 1 === 0 ? accounts[0] : noteDetails.recipient);
       setEndorseAmount(noteDetails.amount - noteDetails.totalWithdraw);
       setLoading(false);
       setShowContent(true);
