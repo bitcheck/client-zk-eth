@@ -24,7 +24,6 @@ export const saveNoteString = (account, noteString, type = 0) => {
       break;
     }
   }
-  console.log(noteString, has);
   if(!has) {
     const key = account + "_" + keyword + "_" + getRandomCode(32);
     localStorage[key] = noteString;
@@ -32,25 +31,31 @@ export const saveNoteString = (account, noteString, type = 0) => {
   } else return 0;
 }
 
-export const getNoteStrings = (account, type) => {
+export const getNoteStrings = (account, netId, type) => {
   var keys = [];
   var values = [];
   for(let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if(type === 0) {
-      if(checkNoteKeyFormat(key, account, "note")) {
-        values.push(localStorage[key]);
-        keys.push(key);
-      }
-    } else {
-      if(checkNoteKeyFormat(key, account, "recv")) {
-        values.push(localStorage[key]);
-        keys.push(key);
+    const value = localStorage[key];
+    const net = value.split('-')[3];
+    const symbol = value.split('-')[0];
+    if(parseInt(net) === netId && symbol === "shaker") {
+      if(type === 0) {
+        if(checkNoteKeyFormat(key, account, "note")) {
+          values.push(localStorage[key]);
+          keys.push(key);
+        }
+      } else if(type === 1) {
+        if(checkNoteKeyFormat(key, account, "recv")) {
+          values.push(localStorage[key]);
+          keys.push(key);
+        }
       }
     }
   }
   return [keys, values];
 }
+
 const checkNoteKeyFormat = (note, account, keyword) => {
   const noteKey = note.split('_');
   if(noteKey[0] === account && noteKey[1] === keyword) return true;
@@ -68,14 +73,11 @@ export const eraseNoteString = (key) => {
 export const batchSaveNotes = (notes, account) => {
   const notesArray = notes.split(',');
   let waitToStore = [];
-  // console.log("====", notesArray)
   for(let i = 0; i < notesArray.length; i++) {
-    // console.log("====", notesArray[i]);
     const key = notesArray[i].split(':')[0];
     const note = notesArray[i].split(':')[1];
     if(checkNoteFormat(note) && key.split('_')[0] === account) {
       // 检测是否与现有note冲突，且账号相符
-      // console.log("----", notesArray[i]);
       let has = false;
       for(let j = 0; j < localStorage.length; j++) {
         const key = localStorage.key(j);

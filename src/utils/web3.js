@@ -1,8 +1,15 @@
 import {parseNote} from "./zksnark.js";
 import {decimals} from "../config.js";
+import {eraseNoteString} from "./localstorage.js";
 const { GasPriceOracle } = require('gas-price-oracle');
 
-export const loadWithdrawArray = async (noteArray, shaker, lib) => {
+/**
+ * Get withdrawal data from contract
+ * @param {*} noteArray 
+ * @param {*} shaker 
+ * @param {*} web3 
+ */
+export const loadWithdrawArray = async (noteArray, shaker, web3) => {
   let currencyArray = [];
   let amountArray = [];
   let netIdArray = [];
@@ -29,7 +36,7 @@ export const loadWithdrawArray = async (noteArray, shaker, lib) => {
         var withdrawEvent = events[i];
         const amount = withdrawEvent.returnValues.amount;
         const fee = withdrawEvent.returnValues.fee
-        const { timestamp } = await lib.eth.getBlock(withdrawEvent.blockHash)
+        const { timestamp } = await web3.eth.getBlock(withdrawEvent.blockHash)
         const withdrawalDate = new Date(timestamp * 1000)
         re.push({
           amount: long2Short(amount, decimals),
@@ -48,12 +55,38 @@ export const loadWithdrawArray = async (noteArray, shaker, lib) => {
   }
 }
 
-export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, lib) => {
+/**
+ * Delete all the note key in localstorage which can not be found on chain.
+ */
+export const cleanLocalStorage = (eventsContract, notekeysLocal, depositArray) => {
+  let deleteNotekeyArray = [];
+  for(let i = 0; i < depositArray.length; i++) {
+    let has = false;
+    for(let j = 0; j < eventsContract.length; j++) {
+      if(depositArray[i].commitmentHex === eventsContract[j].returnValues.commitment) {
+        has = true;
+        break;
+      }
+    }
+    if(!has) deleteNotekeyArray.push(notekeysLocal[i])
+  }
+  console.log("AAAAAA", deleteNotekeyArray);
+  for(let i = 0; i < deleteNotekeyArray.length; i++) eraseNoteString(deleteNotekeyArray[i]);
+}
+
+/**
+ * Get All notes details from contract with lowest download from blockchain
+ * @param {*} noteKeyArray 
+ * @param {*} noteArray 
+ * @param {*} shaker 
+ * @param {*} web3 
+ */
+export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, web3) => {
   let currencyArray = [];
   let amountArray = [];
   let netIdArray = [];
   let depositArray = [];
-  const withdrawals = await loadWithdrawArray(noteArray, shaker, lib);
+  const withdrawals = await loadWithdrawArray(noteArray, shaker, web3);
   try {
     for(let i = 0; i < noteArray.length; i++) {
       const { currency, amount, netId, deposit } = parseNote(noteArray[i]);
@@ -62,7 +95,7 @@ export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, lib) 
       amountArray.push(amount);
       netIdArray.push(netId);
     }
-    console.log("1111")
+    // console.log("1111")
     // Load deposit data
     const events = await shaker.getPastEvents('Deposit', {
       fromBlock: 0,
@@ -70,7 +103,10 @@ export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, lib) 
     })
 
     if( events.length === 0) return [];
-    console.log("2222", events)
+    // console.log("2222", events)
+
+    // Clean the useless note keys in localStorage
+    cleanLocalStorage(events, noteKeyArray, depositArray);
 
     let re = [];
     for(let i = 0; i < events.length; i++) {
@@ -98,7 +134,7 @@ export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, lib) 
         const { timestamp, orderStatus, recipient, effectiveTime, commitment } = depositEvent.returnValues
         const txHash = depositEvent.transactionHash
         // const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call({ from: account, gas: 1e6}) //没必要，去掉
-        const receipt = await lib.eth.getTransactionReceipt(txHash)
+        const receipt = await web3.eth.getTransactionReceipt(txHash)
         const depositDate = new Date(timestamp * 1000)
         // console.log(depositDate, noteData, timestamp, orderStatus, recipient, effectiveTime, commitment);
         re.push({
@@ -128,12 +164,12 @@ export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, lib) 
   }
 }
 
-export const getNoteDetails = async (noteKey, note, shaker, lib) => {
+export const getNoteDetails = async (noteKey, note, shaker, web3) => {
   const { currency, amount, netId, deposit } = parseNote(note)
-  const depositInfo = await loadDepositData({ deposit }, shaker, lib);
+  const depositInfo = await loadDepositData({ deposit }, shaker, web3);
   if(depositInfo === null) return null;
   const depositDate = new Date(depositInfo.timestamp * 1000)
-  const withdrawData = await loadWithdrawalData({ deposit }, shaker, lib);
+  const withdrawData = await loadWithdrawalData({ deposit }, shaker, web3);
   return({
     noteKey,
     currency, 
@@ -153,7 +189,7 @@ export const getNoteDetails = async (noteKey, note, shaker, lib) => {
     note: note
   })
 }
-export async function loadDepositData({ deposit }, shaker, lib, account) {
+export async function loadDepositData({ deposit }, shaker, web3, account) {
   try {
     const eventWhenHappened = await shaker.getPastEvents('Deposit', {
       filter: {
@@ -170,7 +206,7 @@ export async function loadDepositData({ deposit }, shaker, lib, account) {
     const { timestamp, orderStatus, recipient, effectiveTime } = eventWhenHappened[0].returnValues
     const txHash = eventWhenHappened[0].transactionHash
     const isSpent = await shaker.methods.isSpent(deposit.nullifierHex).call({ from: account, gas: 1e6})
-    const receipt = await lib.eth.getTransactionReceipt(txHash)
+    const receipt = await web3.eth.getTransactionReceipt(txHash)
 
     return { timestamp, txHash, isSpent, from: receipt.from, commitment: deposit.commitmentHex, orderStatus, recipient, effectiveTime }
   } catch (e) {
@@ -179,7 +215,7 @@ export async function loadDepositData({ deposit }, shaker, lib, account) {
   }
 }
 
-export async function loadWithdrawalData({ deposit }, shaker, lib) {
+export async function loadWithdrawalData({ deposit }, shaker, web3) {
   try {
     const events = await await shaker.getPastEvents('Withdrawal', {
       fromBlock: 0,
@@ -197,7 +233,7 @@ export async function loadWithdrawalData({ deposit }, shaker, lib) {
       const amount = withdrawEvent.returnValues.amount;
       totalWithdraw += long2Short(amount, decimals);
       const fee = withdrawEvent.returnValues.fee
-      const { timestamp } = await lib.eth.getBlock(withdrawEvent.blockHash)
+      const { timestamp } = await web3.eth.getBlock(withdrawEvent.blockHash)
       const withdrawalDate = new Date(timestamp * 1000)
       withdrawArray.push({
         amount: long2Short(amount, decimals),
@@ -257,4 +293,14 @@ export const getNoteShortStrings = (noteStrings) => {
 }
 export const getNoteShortString = (noteString) => {
   return noteString.substring(0, 40) + '...';
+}
+export const checkAddressIsContract = async (address, web3) => {
+  if(validateAddress(address, web3)) {
+    const code = await web3.eth.getCode(address);
+    if(code === '0x') return 2;  // Smart contract
+    else return 1; // Normal address
+  } else return 0; // Invalid address
+}
+export const validateAddress = (address, web3) => {
+  return web3.utils.isAddress(address);
 }

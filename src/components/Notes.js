@@ -36,8 +36,8 @@ export default function Notes(props) {
 
   useEffect(()=>{
     if(accounts && accounts.length > 0) {
-      console.log(accounts[0])
-      console.log("Cheques");
+      // console.log(accounts[0])
+      // console.log("Cheques");
       load();
     }
   }, [accounts])
@@ -50,7 +50,7 @@ export default function Notes(props) {
     setCheques([]);
 
     // 调用本地localStorage存储
-    const [noteKeys, noteArray] = getNoteStrings(accounts[0], type);
+    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type);
 
     if(noteArray.length === 0) {
       setCheques([]);
@@ -172,7 +172,7 @@ export default function Notes(props) {
     if(notes !== "") importNotes = notes;
   }
   const getExportCheques = () => {
-    const [noteKeys, noteArray] = getNoteStrings(accounts[0], type);
+    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type);
     let re = [];
     for(let i = 0; i < noteKeys.length; i++) {
       re.push(noteKeys[i] + ":" + noteArray[i]);

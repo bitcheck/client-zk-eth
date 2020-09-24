@@ -45,8 +45,8 @@ export default function Deposit(props) {
 
   useEffect(() => {
     if(accounts && accounts.length > 0) {
-      console.log(accounts[0]);
-      console.log("Deposit");
+      // console.log(accounts[0]);
+      // console.log("Deposit");
       init();
     }
   },[accounts])
@@ -62,7 +62,6 @@ export default function Deposit(props) {
   const init = async () => {
     setLoading(true);
     const ethBalance = web3.utils.fromWei(await web3.eth.getBalance(accounts[0]));
-    console.log(ethBalance)
     if(parseFloat(ethBalance) === 0.1) {
       setOutOfGas(true);
       return;
@@ -117,7 +116,7 @@ export default function Deposit(props) {
     } else {
       combination = [depositAmount];
     }
-    // console.log("=======>", combination);
+
     let noteStrings = [];
     let commitments = [];
     let amounts = [];
@@ -125,7 +124,7 @@ export default function Deposit(props) {
       const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
       const note = toHex(deposit.preimage, 62) //获取零知识证明
       const noteString = `shaker-${symbol.toLowerCase()}-${combination[i]}-${netId}-${note}` //零知识证明Note
-      console.log(noteString);
+      // console.log(noteString);
       noteStrings.push(noteString);
       commitments.push(deposit.commitmentHex);
       amounts.push(toWeiString(combination[i]));
@@ -133,9 +132,9 @@ export default function Deposit(props) {
     // console.log(amounts, noteStrings, commitments);
     // this accounts[0] means nothing, just to be legal
     const withdrawAddr = orderStatus === 1 ? withdrawAddress : accounts[0];
-    console.log(amounts, commitments, orderStatus, withdrawAddr, effectiveTime);
+    // console.log(amounts, commitments, orderStatus, withdrawAddr, effectiveTime);
     const et = effectiveTimeStatus === 1 ? effectiveTime : parseInt((new Date().getTime()) / 1000);
-    console.log(("------>", et));
+    // console.log(("------>", et));
     const gas = await shaker.methods.depositERC20Batch(amounts, commitments, orderStatus, withdrawAddr, et).estimateGas({ from: accounts[0], gas: 10e6});
     console.log("Estimate GAS", gas);
     const noteShortStrings = getNoteShortStrings(noteStrings);
@@ -193,11 +192,11 @@ export default function Deposit(props) {
       // Save to localStorage
       for(let i = 0; i < noteStrings.length; i++) keys.push(saveNoteString(accounts[0], noteStrings[i]));
       const et = effectiveTimeStatus === 1 ? effectiveTime : parseInt((new Date().getTime()) / 1000);
-      console.log("=====> ", et);
+      // console.log("=====> ", et);
       await shaker.methods.depositERC20Batch(amounts, commitments, orderStatus, withdrawAddr, et).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       setLoading(false);
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       toast.success("#" + err.code + ", " + err.message);
       // 如果出错，删除刚刚生成的LocalStorage key
       for(let i = 0; i < keys.length; i++) eraseNoteString(keys[i]);
@@ -229,7 +228,7 @@ export default function Deposit(props) {
     }
   }
   const openOrderToCheque = () => {
-    console.log("Open order cheque");
+    // console.log("Open order cheque");
     setOrderStatus(orderStatus === 0 ? 1 : 0);
   }
 
@@ -240,9 +239,9 @@ export default function Deposit(props) {
     setEffectiveTimeStatus(effectiveTimeStatus === 0 ? 1 : 0);
   }
   const onEffectiveTimeChange = (datetime) => {
-    console.log(datetime);
+    // console.log(datetime);
     const timeStamp = (new Date(datetime).getTime()) / 1000;
-    console.log(timeStamp);
+    // console.log(timeStamp);
     setEffectiveTime(timeStamp);
   }
   return(
@@ -325,7 +324,7 @@ export default function Deposit(props) {
 
             <SelectBox 
               status={orderStatus}
-              description="Open order cheque"
+              description="Open order cheque to address"
               changeSelectStatus={openOrderToCheque}
             />
             {orderStatus === 1 ?

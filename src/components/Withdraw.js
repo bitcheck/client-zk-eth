@@ -5,7 +5,7 @@ import { faSpinner, faFrown, faLock, faBookmark, faTimes } from '@fortawesome/fr
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {addressConfig, netId} from "../config.js";
-import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice} from "../utils/web3.js";
+import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage.js";
 import DateTimePicker from 'react-datetime-picker';
@@ -18,7 +18,6 @@ export default function Withdraw(props) {
   const {accounts, lib} = web3Context;
   const web3 = lib;
   const [withdrawAmount, setWithdrawAmount] = useState(0);
-  const [withdrawAddress, setWithdrawAddress] = useState("");
   const [depositAmount, setDepositAmount] = useState(0);
   const [depositTime, setDepositTime] = useState("-");
   const [balance, setBalance] = useState(0);
@@ -70,7 +69,6 @@ export default function Withdraw(props) {
 
   const getUrl = () => {
     const url = window.location.href;
-    // console.log(url);
     const index1 = url.indexOf("//");
     const http = url.substring(0, index1 + 2);
     const body = url.substring(index1 + 2, url.length);
@@ -85,11 +83,9 @@ export default function Withdraw(props) {
 
   useEffect(()=>{
     if(accounts && accounts.length > 0) {
-      console.log(accounts[0]);
-      // initProvingKey();
-      setWithdrawAddress(accounts[0]);
+      // console.log(accounts[0]);
       init();
-      console.log("Withdraw");
+      // console.log("Withdraw");
     }
   },[accounts])
 
@@ -103,7 +99,6 @@ export default function Withdraw(props) {
   const getWithdrawProof = async (deposit, recipient, fee, amount) => {
     const url = getUrl();
     const proving_key = await (await fetch(`${url}/circuits/withdraw_proving_key.bin`)).arrayBuffer();
-    // console.log("proving_key", proving_key);
 
     const { proof, args } = await generateProof({ 
       deposit, 
@@ -118,11 +113,10 @@ export default function Withdraw(props) {
     return { proof, args };
   }
   const withdraw = async () => {
-    // console.log(withdrawAmount, withdrawAddress, currency);
     if(!inputValidate()) return;
     setRunning(true);
     const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
-    const { proof, args } = await getWithdrawProof(deposit, withdrawAddress, 0, withdrawAmount);
+    const { proof, args } = await getWithdrawProof(deposit, recipient, 0, withdrawAmount);
     args.push(deposit.commitmentHex);
     const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
     console.log("Estimate GAS", gas);
@@ -138,7 +132,7 @@ export default function Withdraw(props) {
 // 0x6ebbc3d0Ac2553Cbe610359f4ffbBdddB8Cbeaed
   const endorse = async (currentNote) => {
     noteCopied = false;
-    console.log("背书开始", endorseAddress, endorseAmount, endorseEffectiveTime);
+    // console.log("背书开始", endorseAddress, endorseAmount, endorseEffectiveTime);
     if(!endorseInputValidate()) return;
 
     const withdrawAddr = endorseOrderStatus === 1 ? endorseAddress : accounts[0];
@@ -152,12 +146,12 @@ export default function Withdraw(props) {
     const noteString = `shaker-${currency.toLowerCase()}-${endorseAmount}-${netId}-${note}` //零知识证明Note
     const et = endorseEffectiveTimeStatus === 1 ? endorseEffectiveTime : effectiveTime;
     args.push(deposit.commitmentHex, newDeposit.commitmentHex, et);
-    console.log("======", args);
+    // console.log("======", args);
     const gas = await shaker.methods.endorse(proof, ...args).estimateGas({ from: accounts[0], gas: 10e6});
     console.log("Estimate GAS", gas);
 
     const noteShortString = getNoteShortString(noteString);
-    console.log("note", noteShortString);
+    // console.log("note", noteShortString);
 
     // Open dialog confirm
     confirmAlert({
@@ -171,7 +165,7 @@ export default function Withdraw(props) {
               <div className='copy-notes-button'>Copy all notes and save</div>
             </CopyToClipboard>
             <p>Estimated GAS Fee: {(gas * gasPrice * 1.1 / 1e9).toFixed(6)} ETH</p>
-            {orderStatus === 1 ? <div><p>Recipient: {formatAccount(withdrawAddress)}</p></div> : ""}
+            {orderStatus === 1 ? <div><p>Recipient: {formatAccount(recipient)}</p></div> : ""}
             <button className='confirm-button'
               onClick={() => {
                 if(!noteCopied) {
@@ -190,6 +184,7 @@ export default function Withdraw(props) {
               onClick={() => {
                 onClose();
                 setLoading(false);
+                setEndorsing(false);
               }}
             >
               Cancel
@@ -209,14 +204,13 @@ export default function Withdraw(props) {
       await onNoteChange();
       setEndorsing(false);
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       toast.success("#" + err.code + ", " + err.message);
       // 如果出错，删除刚刚生成的LocalStorage key
       eraseNoteString(key);
       setEndorsing(false);
       // setLoading(false);
     }
-
   }
 
   const onCopyNoteClick = () => {
@@ -225,8 +219,6 @@ export default function Withdraw(props) {
   }
 
   const endorseInputValidate = () => {
-    // ######
-    console.log("&&&&&", orderStatus, accounts[0], recipient);
     if(orderStatus === 1 && accounts[0] !== recipient) {
       toast.success("You must be the reciever of current cheque");
       return false;
@@ -234,6 +226,10 @@ export default function Withdraw(props) {
 
     if(endorseOrderStatus === 1 && endorseAddress === "") {
       toast.success("Please input the right address of transfer to");
+      return false;
+    }
+    if(!validateAddress(endorseAddress, web3)) {
+      toast.success("Address is invalid");
       return false;
     }
     return true;
@@ -248,7 +244,7 @@ export default function Withdraw(props) {
   }
 
   const inputValidate = () => {
-    if(parseInt(withdrawAmount) === 0 || withdrawAddress === "") {
+    if(parseInt(withdrawAmount) === 0 || recipient === "") {
       toast.success("Please input right data");
       return false;
     }
@@ -262,6 +258,10 @@ export default function Withdraw(props) {
     }
     if( note.substring(0, note.length) === ".".repeat(note.length)) {
       toast.success("Recipient is wrong, DON'T input the recipient manully, just paste it.");
+      return false;
+    }
+    if(!validateAddress(recipient, web3)) {
+      toast.success("Address is invalid");
       return false;
     }
     return true;
@@ -279,7 +279,7 @@ export default function Withdraw(props) {
     try {
       setLoading(true);
       const noteDetails = await getNoteDetails(0, note, shaker, web3, accounts[0]);
-      console.log(noteDetails);
+      // console.log(noteDetails);
       setDepositAmount(noteDetails.amount);
       setBalance(noteDetails.amount - noteDetails.totalWithdraw);
       setDepositTime(noteDetails.time);
@@ -322,9 +322,7 @@ export default function Withdraw(props) {
   }
 
   const onEndorseEffectiveTimeChange = (datetime) => {
-    console.log(datetime);
     const timeStamp = (new Date(datetime).getTime()) / 1000;
-    console.log(timeStamp);
     setEndorseEffectiveTime(timeStamp);
   }
   const openEndorseNote = () => {
@@ -390,11 +388,16 @@ export default function Withdraw(props) {
 
             {effectiveTime * 1000 > (new Date()).getTime() && orderStatus === 0 ? '' :
             <div>
-              <div className="font1">Withdraw address</div>
               {orderStatus === 0 ? 
-                <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
+                <div>
+                <div className="font1">Withdraw address (Can change)</div>
+                <input className="withdraw-input withdraw-address" value={recipient} onChange={(e) => setRecipient(e.target.value)}/>
+                </div>
                 :
+                <div>
+                <div className="font1">Withdraw address (Can not change)</div>
                 <input className="withdraw-input withdraw-address" value={recipient} readOnly/>
+                </div>
               }
             </div>
             }
@@ -415,10 +418,10 @@ export default function Withdraw(props) {
             }
 
             {/* Endorsement Start */}
-            {balance <= 0 ? '' :
+            {balance <= 0 || (orderStatus === 1 && accounts[0] !== recipient) ? '' :
             <SelectBox 
               status={endorseUI}
-              description="Don't want to withdraw, transfer it"
+              description="Open a new cheque without withdrawal"
               changeSelectStatus={openEndorseNote}
             />
             }
@@ -433,7 +436,7 @@ export default function Withdraw(props) {
               />
               {endorseAmountStatus === 1 ? */}
               <div className="order-to-cheque">
-                <div className="font1">Transfer Amount</div>
+                <div className="font1">Cheque Amount (Can open partially)</div>
                 <input className="withdraw-input" value={endorseAmount} onChange={(e) => setEndorseAmount(e.target.value)}/>
               </div>
               {/* : ""} */}
@@ -459,7 +462,7 @@ export default function Withdraw(props) {
 
               <SelectBox 
                 status={endorseOrderStatus}
-                description="Transfer the cheque to order"
+                description="Open order cheque to address"
                 changeSelectStatus={changeEndorseOrderStatus}
               />
               {endorseOrderStatus === 1 ?
