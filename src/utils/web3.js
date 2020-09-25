@@ -39,7 +39,7 @@ export const loadWithdrawArray = async (noteArray, shaker, web3) => {
         const { timestamp } = await web3.eth.getBlock(withdrawEvent.blockHash)
         const withdrawalDate = new Date(timestamp * 1000)
         re.push({
-          amount: long2Short(amount, decimals),
+          amount: fromWeiString(amount, decimals),
           fee,
           txHash: withdrawEvent.transactionHash,
           to: withdrawEvent.returnValues.to,
@@ -87,6 +87,7 @@ export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, web3)
   let netIdArray = [];
   let depositArray = [];
   const withdrawals = await loadWithdrawArray(noteArray, shaker, web3);
+  console.log('####', withdrawals);
   try {
     for(let i = 0; i < noteArray.length; i++) {
       const { currency, amount, netId, deposit } = parseNote(noteArray[i]);
@@ -231,12 +232,12 @@ export async function loadWithdrawalData({ deposit }, shaker, web3) {
     for(var i = 0; i < withdrawEvents.length; i++) {
       var withdrawEvent = withdrawEvents[i];
       const amount = withdrawEvent.returnValues.amount;
-      totalWithdraw += long2Short(amount, decimals);
+      totalWithdraw += fromWeiString(amount, decimals);
       const fee = withdrawEvent.returnValues.fee
       const { timestamp } = await web3.eth.getBlock(withdrawEvent.blockHash)
       const withdrawalDate = new Date(timestamp * 1000)
       withdrawArray.push({
-        amount: long2Short(amount, decimals),
+        amount: fromWeiString(amount, decimals),
         fee,
         txHash: withdrawEvent.transactionHash,
         to: withdrawEvent.returnValues.to,
@@ -278,11 +279,36 @@ export const getERC20Symbol = async(contract) => {
   return await contract.methods.symbol().call();
 }
 
-export const long2Short = (num, decimals) => {
-  return num / Math.pow(10, decimals);
+export function fromWeiString(numStr, decimal) {
+  numStr = numStr.toString();
+	const pointPos = numStr.length - decimal;
+	let re;
+	if(pointPos > 0) re = numStr.substring(0, pointPos) + "." + numStr.substring(pointPos + 1, numStr.length);
+	else re = "0." + "0".repeat(-pointPos) + numStr;
+	return parseFloat(re)
 }
 
-export const toWeiString = num => num + "0".repeat(decimals);
+export function toWeiString(numStr, decimal) {
+	numStr = numStr.toString();
+	let zheng = numStr.substring(0, numStr.indexOf('.'));
+	if(numStr.indexOf('.') > 0) zheng = parseInt(zheng) === 0 ? "" : zheng;
+	else zheng = numStr;
+	let xiao, xiaoLength;
+	if(numStr.indexOf('.') > 0) {
+		xiao = numStr.substr(numStr.indexOf('.') + 1, numStr.length - zheng.length - 1)
+	} else {
+		xiao = "";
+	}
+	
+	if(xiao.length > decimal) {
+		xiaoLength = decimal;
+		xiao = xiao.substring(0, decimal);
+	} else {
+		xiaoLength = xiao.length;
+	}
+	const xiaoNew = xiao + ("0").repeat(decimal - xiaoLength)
+	return zheng + xiaoNew;
+}
 
 export const getNoteShortStrings = (noteStrings) => {
   let re = [];
@@ -291,9 +317,11 @@ export const getNoteShortStrings = (noteStrings) => {
   }
   return re;
 }
+
 export const getNoteShortString = (noteString) => {
   return noteString.substring(0, 40) + '...';
 }
+
 export const checkAddressIsContract = async (address, web3) => {
   if(validateAddress(address, web3)) {
     const code = await web3.eth.getCode(address);

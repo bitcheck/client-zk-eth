@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faTimes, faFrown } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {toWeiString, long2Short, formatAmount, formatAccount, getGasPrice, getERC20Symbol, getNoteShortStrings} from "../utils/web3";
+import {toWeiString, fromWeiString, formatAmount, formatAccount, getGasPrice, getERC20Symbol, getNoteShortStrings} from "../utils/web3";
 import {getCombination} from "../utils/devide.js";
 import {depositAmounts, decimals} from "../config.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage";
@@ -70,7 +70,7 @@ export default function Deposit(props) {
     }
     setIsApproved(await checkAllowance(depositAmount));
     setEthBalance(ethBalance);
-    setUsdtBalance(long2Short(await getERC20Balance(accounts[0]), decimals));
+    setUsdtBalance(fromWeiString(await getERC20Balance(accounts[0]), decimals));
     setGasPrice(await getGasPrice());
     setSymbol(await getERC20Symbol(erc20));
     setLoading(false);
@@ -127,7 +127,7 @@ export default function Deposit(props) {
       // console.log(noteString);
       noteStrings.push(noteString);
       commitments.push(deposit.commitmentHex);
-      amounts.push(toWeiString(combination[i]));
+      amounts.push(toWeiString(combination[i], decimals));
     }
     // console.log(amounts, noteStrings, commitments);
     // this accounts[0] means nothing, just to be legal
@@ -192,7 +192,7 @@ export default function Deposit(props) {
       // Save to localStorage
       for(let i = 0; i < noteStrings.length; i++) keys.push(saveNoteString(accounts[0], noteStrings[i]));
       const et = effectiveTimeStatus === 1 ? effectiveTime : parseInt((new Date().getTime()) / 1000);
-      // console.log("=====> ", et);
+      // console.log("=====> ", amounts);
       await shaker.methods.depositERC20Batch(amounts, commitments, orderStatus, withdrawAddr, et).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
       setLoading(false);
     } catch (err) {
@@ -207,7 +207,9 @@ export default function Deposit(props) {
   const checkAllowance = async(depositAmount) => {
     try {
       let allowance = await erc20.methods.allowance(accounts[0], ERC20ShakerAddress).call({ from: accounts[0] });
-      allowance = long2Short(allowance, decimals);
+      console.log("allowance", allowance);
+      allowance = fromWeiString(allowance, decimals);
+      console.log("allowance", allowance);
       return allowance >= depositAmount;
     } catch (err) {
       // Out of gas
@@ -219,7 +221,7 @@ export default function Deposit(props) {
     // Approve 200000 once to avoid approve amount everytime.
     setLoading(true);
     try {
-      await erc20.methods.approve(ERC20ShakerAddress, web3.utils.toBN(toWeiString(200000))).send({ from: accounts[0], gas: 2e6 })
+      await erc20.methods.approve(ERC20ShakerAddress, toWeiString(200000, decimals)).send({ from: accounts[0], gas: 2e6 })
       setIsApproved(true);
       setLoading(false);  
     } catch (err) {

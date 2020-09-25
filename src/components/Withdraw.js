@@ -4,14 +4,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faFrown, faLock, faBookmark, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {addressConfig, netId} from "../config.js";
-import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress} from "../utils/web3.js";
+import {addressConfig, netId, callRelayer, relayerURL, decimals} from "../config.js";
+import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress, fromWeiString} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage.js";
 import DateTimePicker from 'react-datetime-picker';
 import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import { confirmAlert } from 'react-confirm-alert'; // Import
+import * as request from 'request';
 
 export default function Withdraw(props) {
   const {web3Context} = props;
@@ -97,6 +98,7 @@ export default function Withdraw(props) {
   const requestAccess = useCallback(() => requestAuth(web3Context), []);
 
   const getWithdrawProof = async (deposit, recipient, fee, amount) => {
+    // fee, amount must be wei or with decimal string
     const url = getUrl();
     const proving_key = await (await fetch(`${url}/circuits/withdraw_proving_key.bin`)).arrayBuffer();
 
@@ -104,7 +106,7 @@ export default function Withdraw(props) {
       deposit, 
       recipient, 
       fee,
-      refund: toWeiString(parseInt(amount)),
+      refund: amount,
     }, 
       shaker, 
       proving_key,       
@@ -115,21 +117,163 @@ export default function Withdraw(props) {
   const withdraw = async () => {
     if(!inputValidate()) return;
     setRunning(true);
-    const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
-    const { proof, args } = await getWithdrawProof(deposit, recipient, 0, withdrawAmount);
-    args.push(deposit.commitmentHex);
-    const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
-    console.log("Estimate GAS", gas);
-    try {
-      await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
-      await onNoteChange();
-      setRunning(false);
-    } catch (err) {
-      toast.success("#" + err.code + ", " + err.message);
-      setRunning(false);
+    
+    if(!callRelayer) {
+      // Operate from local
+      const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
+      const { proof, args } = await getWithdrawProof(deposit, recipient, 0, toWeiString(withdrawAmount, decimals));
+      args.push(deposit.commitmentHex);
+      const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
+      console.log("Estimate GAS", gas);
+      try {
+        await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
+        await onNoteChange();
+        setRunning(false);
+      } catch (err) {
+        toast.success("#" + err.code + ", " + err.message);
+        setRunning(false);
+      }  
+    } else {
+      // Get estimate fee from relayer
+      console.log("Call relayer...", relayerURL, currency, withdrawAmount);
+      try {
+        request({
+          url: relayerURL + "/estimatefee/",
+          method: "POST",
+          json: true,
+          headers: {
+              "content-type": "application/json",
+          },
+          body: {
+            currency: currency.toLowerCase(),
+            amount: withdrawAmount
+          }
+        }, function(error, response, body) {
+          console.log(error, response, body);
+            if (!error && response.statusCode == 200) {
+              // console.log(body) // 请求成功的处理逻辑
+              confirmAlert({
+                customUI: ({ onClose }) => {
+                  return (
+
+                    <div className='confirm-box'>
+                      <h1>WITHDRAW FEE</h1>
+                      <p>Check the current withdraw fee carefully, the relayer will deduce fee from your withdrawal amount</p>
+                      <div className='fee-line'>
+                        <div className='fee-key'>Estimated Gas</div>
+                        <div className='fee-value'>{body.gas}</div>
+                      </div>
+                      <div className='fee-line'>
+                        <div className='fee-key'>Current Gas Price</div>
+                        <div className='fee-value'>{body.gasPrice.fast} GWei</div>
+                      </div>
+                      <div className='fee-line'>
+                        <div className='fee-key'>ETH Price</div>
+                        <div className='fee-value'>{formatAmount(1000000000000000000 / body.ethPrices, 2)} USDT</div>
+                      </div>
+                      <div className='fee-line'>
+                        <div className='fee-key'>Gas Fee by ETH</div>
+                        <div className='fee-value'>{formatAmount(body.gasFeeEth, 6)} ETH</div>
+                      </div>
+                      <div className='fee-line'>
+                        <div className='fee-key'>Gas Fee by USDT</div>
+                        <div className='fee-value'>{formatAmount(body.gasFeeERC20, 6)} {currency.toUpperCase()}</div>
+                      </div>
+                      <div className='fee-line'>
+                        <div className='fee-key'>Service Fee ({body.feeRate}%)</div>
+                        <div className='fee-value'>{formatAmount(body.serviceFee, 2)} {currency.toUpperCase()}</div>
+                      </div>
+                      <div className='fee-line'>
+                        <div className='fee-key'>Total Fee</div>
+                        <div className='fee-value'>{formatAmount(body.totalFee, 2)} {currency.toUpperCase()}</div>
+                      </div>
+                      <div className='fee-line'>
+                        <div className='fee-key'>You get</div>
+                        <div className='fee-value'>{formatAmount(withdrawAmount - body.totalFee, 2)} {currency.toUpperCase()}</div>
+                      </div>
+
+
+                      <button className='confirm-button'
+                        onClick={async () => {
+                          // ###### 判断提现金额是否大于费用
+
+                          const { deposit } = parseNote(note)
+                          const { proof, args } = await getWithdrawProof(
+                            deposit, 
+                            recipient, 
+                            toWeiString(body.totalFee, decimals), 
+                            toWeiString(withdrawAmount, decimals)
+                          );
+                          const params = {
+                            proof, 
+                            args,
+                            extra: [deposit.commitmentHex],
+                            currency: currency.toLowerCase(),
+                            amount: withdrawAmount
+                          }
+
+                          console.log(params);
+                          console.log(toWeiString(body.totalFee, decimals), toWeiString(withdrawAmount, decimals));
+                          try {
+                            request({
+                              url: relayerURL + "/withdraw/",
+                              method: "POST",
+                              json: true,
+                              headers: {
+                                  "content-type": "application/json",
+                              },
+                              body: params
+                            }, function(error, response, body) {
+                              console.log(error, response, body);
+                              if (!error && response.statusCode == 200) {
+                                // ###### 处理服务器反馈
+                                console.log("*****", body);
+                              } else {
+                                console.log(body)
+                              }
+                            })
+                          } catch (err) {
+                            setRunning(false)
+                          }
+
+
+
+                          
+                          onClose();
+                          setRunning(false);
+                        }}>Continue</button>
+                      <button className="cancel-button"
+                        onClick={() => {
+                          onClose();
+                          setRunning(false);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  );
+                }
+              });
+
+            } else {
+              setRunning(false)
+            }
+        }); 
+      } catch (err) {
+        setRunning(false)
+      }
     }
+
+
+
+
+
+
+
+
+
   }
-// 0x6ebbc3d0Ac2553Cbe610359f4ffbBdddB8Cbeaed
+
   const endorse = async (currentNote) => {
     noteCopied = false;
     // console.log("背书开始", endorseAddress, endorseAmount, endorseEffectiveTime);
@@ -138,7 +282,12 @@ export default function Withdraw(props) {
     const withdrawAddr = endorseOrderStatus === 1 ? endorseAddress : accounts[0];
     setEndorsing(true);
     const { deposit } = parseNote(currentNote) //从NOTE中解析金额/币种/网络/证明
-    const { proof, args } = await getWithdrawProof(deposit, withdrawAddr, endorseOrderStatus, endorseAmount);
+    const { proof, args } = await getWithdrawProof(
+      deposit, 
+      withdrawAddr, 
+      endorseOrderStatus, 
+      toWeiString(endorseAmount, decimals)
+    );
 
     // Generate new commitment
     const newDeposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })

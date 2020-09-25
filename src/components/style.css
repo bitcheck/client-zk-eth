@@ -431,3 +431,17 @@ body {
   margin-right: 5%;
   margin-top: -2px;
 }
+
+.fee-line {
+  display: flex;
+  flex: 1;
+  justify-content: space-between; 
+}
+.fee-line .fee-key {
+  color: #50BF3E;
+  margin-bottom: 5px;
+}
+.fee-line .fee-value {
+  color: white;
+  margin-bottom: 5px;
+}

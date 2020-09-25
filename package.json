@@ -26,6 +26,7 @@
     "react-router-dom": "^5.2.0",
     "react-scripts": "3.4.3",
     "react-toastify": "^6.0.8",
+    "request": "^2.88.2",
     "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
     "websnark": "git+https://github.com/tornadocash/websnark.git#2041cfa5fa0b71cd5cca9022a4eeea4afe28c9f7"
   },
