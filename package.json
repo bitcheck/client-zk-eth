@@ -3,11 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "homepage": "http://shaker.bi8.in",
-  "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^1.2.30",
-    "@fortawesome/free-solid-svg-icons": "^5.14.0",
-    "@fortawesome/react-fontawesome": "^0.1.11",
-    "@openzeppelin/network": "^0.4.3",
+  "devDependencies": {
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
@@ -16,6 +12,14 @@
     "babel-preset-latest": "^6.24.1",
     "babel-preset-react": "^6.24.1",
     "circom": "^0.0.35",
+    "compression-webpack-plugin": "^6.0.2",
+    "react-scripts": "3.4.3"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^1.2.30",
+    "@fortawesome/free-solid-svg-icons": "^5.14.0",
+    "@fortawesome/react-fontawesome": "^0.1.11",
+    "@openzeppelin/network": "^0.4.3",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
     "gas-price-oracle": "^0.1.5",
     "react": "^16.13.1",
@@ -24,7 +28,6 @@
     "react-datetime-picker": "^3.0.4",
     "react-dom": "^16.13.1",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "3.4.3",
     "react-toastify": "^6.0.8",
     "request": "^2.88.2",
     "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
