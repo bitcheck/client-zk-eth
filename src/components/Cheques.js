@@ -151,7 +151,7 @@ export default function Cheques(props) {
                   toast.success(`${nums} notes have been imported successfully.`);
                   load();
                 } else {
-                  toast.success(`No new notes imported.`);
+                  toast.warning(`No new notes imported.`);
                 }
                 onClose();
               }}>Import</button>

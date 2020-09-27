@@ -93,7 +93,7 @@ export default function Deposit(props) {
     noteCopied = false;
     // send to smart comtract
     if(usdtBalance < depositAmount) {
-      toast.success(symbol + " Balance is below deposit");
+      toast.warning(symbol + " Balance is below deposit");
       setLoading(false);
       return;
     }
@@ -104,7 +104,7 @@ export default function Deposit(props) {
     }
 
     if((orderStatus === 0 || withdrawAddress === "") && orderStatus === 1) {
-      toast.success("You have choose to issue cheque for order, but the withdraw address is empty");
+      toast.warning("You have choose to issue cheque for order, but the withdraw address is empty");
       setLoading(false);
       return;
     }
@@ -155,12 +155,12 @@ export default function Deposit(props) {
             <button className='confirm-button'
               onClick={() => {
                 if(!noteCopied) {
-                  toast.success('Please copy all the notes before you continue.');
+                  toast.warning('Please copy all the notes before you continue.');
                   return;
                 }
                 // Check eth for gas is enough?
                 if(gas * gasPrice * 1.1 / 1e9 > parseFloat(ethBalance)) {
-                  toast.success('Your ETH balance is not enough for the GAS Fee');
+                  toast.error('Your ETH balance is not enough for the GAS Fee');
                   return;
                 }
                 doDeposit(amounts, commitments, noteStrings, gas); 
@@ -197,7 +197,7 @@ export default function Deposit(props) {
       setLoading(false);
     } catch (err) {
       // console.log(err);
-      toast.success("#" + err.code + ", " + err.message);
+      toast.error("#" + err.code + ", " + err.message);
       // 如果出错，删除刚刚生成的LocalStorage key
       for(let i = 0; i < keys.length; i++) eraseNoteString(keys[i]);
       setLoading(false);
@@ -225,7 +225,7 @@ export default function Deposit(props) {
       setIsApproved(true);
       setLoading(false);  
     } catch (err) {
-      toast.success("#" + err.code + ", " + err.message);
+      toast.error("#" + err.code + ", " + err.message);
       setLoading(false);
     }
   }

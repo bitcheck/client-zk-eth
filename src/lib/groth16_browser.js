@@ -68,7 +68,7 @@ async function build(params) {
         concurrency = 8;
     }
 
-    console.log('concurrency', concurrency);
+    // console.log('concurrency', concurrency);
     function getOnMsg(i) {
         return function(e) {
             let data;
@@ -77,6 +77,7 @@ async function build(params) {
             } else {
                 data = e;
             }
+            console.log("---获取错误消息---", data);
             groth16.working[i]=false;
             groth16.pendingDeferreds[i].resolve(data);
             groth16.processWorks();

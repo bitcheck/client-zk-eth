@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faFrown, faLock, faBookmark, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {addressConfig, netId, callRelayer, relayerURL, decimals} from "../config.js";
+import {addressConfig, netId, callRelayer, relayerURLs, decimals} from "../config.js";
 import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress, fromWeiString} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage.js";
@@ -112,8 +112,10 @@ export default function Withdraw(props) {
       proving_key,       
       accounts[0]
     );
-    return { proof, args };
+    if(proof) return { proof, args };
+    else toast.error('Device Memory is exhausted, please reload.');
   }
+
   const withdraw = async () => {
     if(!inputValidate()) return;
     setRunning(true);
@@ -130,15 +132,15 @@ export default function Withdraw(props) {
         await onNoteChange();
         setRunning(false);
       } catch (err) {
-        toast.success("#" + err.code + ", " + err.message);
+        toast.error("#" + err.code + ", " + err.message);
         setRunning(false);
       }  
     } else {
       // Get estimate fee from relayer
-      console.log("Call relayer...", relayerURL, currency, withdrawAmount);
+      console.log("Call relayer...", relayerURLs[0], currency, withdrawAmount);
       try {
         request({
-          url: relayerURL + "/estimatefee/",
+          url: relayerURLs[0] + "/estimatefee/",
           method: "POST",
           json: true,
           headers: {
@@ -195,7 +197,11 @@ export default function Withdraw(props) {
 
                       <button className='confirm-button'
                         onClick={async () => {
-                          // ###### 判断提现金额是否大于费用
+                          // 判断提现金额是否大于费用
+                          if(parseFloat(body.totalFee) > withdrawAmount) {
+                            toast.error('Your withdrawal amount is smaller than fee.')
+                            return
+                          }
 
                           const { deposit } = parseNote(note)
                           const { proof, args } = await getWithdrawProof(
@@ -212,11 +218,15 @@ export default function Withdraw(props) {
                             amount: withdrawAmount
                           }
 
-                          console.log(params);
+                          if(!proof) {
+                            toast.error('Device memory is exhausted, please reload.');
+                            return;
+                          }
+                          // console.log(params);
                           console.log(toWeiString(body.totalFee, decimals), toWeiString(withdrawAmount, decimals));
                           try {
                             request({
-                              url: relayerURL + "/withdraw/",
+                              url: relayerURLs[0] + "/withdraw/",
                               method: "POST",
                               json: true,
                               headers: {
@@ -224,12 +234,14 @@ export default function Withdraw(props) {
                               },
                               body: params
                             }, function(error, response, body) {
-                              console.log(error, response, body);
+                              // console.log('=====', error, response, body);
                               if (!error && response.statusCode == 200) {
                                 // ###### 处理服务器反馈
-                                console.log("*****", body);
+                                toast.success(body.msg);
+                                if(orderStatus === 0) setRecipient('');
                               } else {
-                                console.log(body)
+                                toast.warning(body.msg);
+                                // console.log(body)
                               }
                             })
                           } catch (err) {
@@ -289,6 +301,10 @@ export default function Withdraw(props) {
       toWeiString(endorseAmount, decimals)
     );
 
+    if(!proof) {
+      toast.error('Device memory is exhausted, please reload.');
+      return;
+    }
     // Generate new commitment
     const newDeposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
     const note = toHex(newDeposit.preimage, 62) //获取零知识证明
@@ -318,12 +334,12 @@ export default function Withdraw(props) {
             <button className='confirm-button'
               onClick={() => {
                 if(!noteCopied) {
-                  toast.success('Please copy all the notes before you continue.');
+                  toast.warning('Please copy all the notes before you continue.');
                   return;
                 }
                 // Check eth for gas is enough?
                 if(gas * gasPrice * 1.1 / 1e9 > parseFloat(ethBalance)) {
-                  toast.success('Your ETH balance is not enough for the GAS Fee');
+                  toast.error('Your ETH balance is not enough for the GAS Fee');
                   return;
                 }
                 doEndorse(proof, args, noteString, gas); 
@@ -354,7 +370,7 @@ export default function Withdraw(props) {
       setEndorsing(false);
     } catch (err) {
       // console.log(err);
-      toast.success("#" + err.code + ", " + err.message);
+      toast.error("#" + err.code + ", " + err.message);
       // 如果出错，删除刚刚生成的LocalStorage key
       eraseNoteString(key);
       setEndorsing(false);
@@ -369,16 +385,16 @@ export default function Withdraw(props) {
 
   const endorseInputValidate = () => {
     if(orderStatus === 1 && accounts[0] !== recipient) {
-      toast.success("You must be the reciever of current cheque");
+      toast.warning("You must be the reciever of current cheque");
       return false;
     }
 
     if(endorseOrderStatus === 1 && endorseAddress === "") {
-      toast.success("Please input the right address of transfer to");
+      toast.warning("Please input the right address of transfer to");
       return false;
     }
-    if(!validateAddress(endorseAddress, web3)) {
-      toast.success("Address is invalid");
+    if(endorseOrderStatus === 1 && !validateAddress(endorseAddress, web3)) {
+      toast.warning("Address is not ETH address");
       return false;
     }
     return true;
@@ -394,23 +410,23 @@ export default function Withdraw(props) {
 
   const inputValidate = () => {
     if(parseInt(withdrawAmount) === 0 || recipient === "") {
-      toast.success("Please input right data");
+      toast.warning("Please input right data");
       return false;
     }
     if( withdrawAmount > balance ) {
-      toast.success("Withdraw amount can be more than current balance: " + balance + " " + currency);
+      toast.warning("Please inputWithdraw amount can not be more than current balance: " + balance + " " + currency);
       return false;
     }
     if( !intValidate(withdrawAmount) ) {
-      toast.success("Withdraw amount must be interger.");
+      toast.warning("Withdraw amount must be interger.");
       return false;
     }
     if( note.substring(0, note.length) === ".".repeat(note.length)) {
-      toast.success("Recipient is wrong, DON'T input the recipient manully, just paste it.");
+      toast.warning("Recipient is wrong, DON'T input the recipient manully, just paste it.");
       return false;
     }
     if(!validateAddress(recipient, web3)) {
-      toast.success("Address is invalid");
+      toast.warning("Address is invalid");
       return false;
     }
     return true;
@@ -437,12 +453,12 @@ export default function Withdraw(props) {
       setEffectiveTime(noteDetails.effectiveTime * 1);
       const dt = new Date(noteDetails.effectiveTime * 1000);
       setEffectiveTimeString(dt.toLocaleDateString() + " " + dt.toLocaleTimeString());
-      setRecipient(noteDetails.orderStatus * 1 === 0 ? accounts[0] : noteDetails.recipient);
+      setRecipient(noteDetails.orderStatus * 1 === 0 ? '' : noteDetails.recipient);
       setEndorseAmount(noteDetails.amount - noteDetails.totalWithdraw);
       setLoading(false);
       setShowContent(true);
     } catch (e) {
-      toast.success("Note is wrong, can not get data");
+      toast.error("Note is wrong, can not get data");
       setDepositAmount(0);
       setBalance(0);
       setDepositTime('-');
@@ -467,7 +483,6 @@ export default function Withdraw(props) {
 
   const saveNotes = () => {
     saveNoteString(accounts[0], note, 1);
-    // toast.success("Your note has been saved, you can find it by pressing Notes button");
   }
 
   const onEndorseEffectiveTimeChange = (datetime) => {
@@ -480,7 +495,7 @@ export default function Withdraw(props) {
 
   const changeEndorseEffectiveTimeStatus = () => setEndorseEffectiveTimeStatus(endorseEffectiveTimeStatus === 0 ? 1 : 0);
   const changeEndorseOrderStatus = () => setEndorseOrderStatus(endorseOrderStatus === 0 ? 1 : 0)
-  // const changeEndorseAddressStatus = () => setEndorseAddressStatus(endorseAddressStatus === 0 ? 1 : 0);
+
   return(
     <div>
       <div className="deposit-background">
@@ -539,23 +554,23 @@ export default function Withdraw(props) {
             <div>
               {orderStatus === 0 ? 
                 <div>
-                <div className="font1">Withdraw address (Can change)</div>
+                <div className="font1">Withdraw address</div>
                 <input className="withdraw-input withdraw-address" value={recipient} onChange={(e) => setRecipient(e.target.value)}/>
                 </div>
                 :
                 <div>
-                <div className="font1">Withdraw address (Can not change)</div>
+                <div className="font1">Withdraw address (To order)</div>
                 <input className="withdraw-input withdraw-address" value={recipient} readOnly/>
                 </div>
               }
             </div>
             }
 
-            {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) ?
+            {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) && recipient !== '' ?
             running ? 
             <div className="button-deposit unavailable">
               <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Withdraw
-              <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
+              {/* <div className="memo">After submiting transaction, you can check the wallet to see the result.</div> */}
             </div> :
             <div className="button-deposit" onClick={withdraw}>
               Withdraw
