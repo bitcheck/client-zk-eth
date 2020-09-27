@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faFrown, faLock, faBookmark, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {addressConfig, netId, callRelayer, relayerURLs, decimals} from "../config.js";
+import {addressConfig, netId, callRelayer, relayerURLs, decimals, simpleVersion} from "../config.js";
 import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress, fromWeiString} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage.js";
@@ -86,6 +86,7 @@ export default function Withdraw(props) {
     if(accounts && accounts.length > 0) {
       // console.log(accounts[0]);
       init();
+      if(orderStatus === 0) setRecipient(accounts[0]);
       // console.log("Withdraw");
     }
   },[accounts])
@@ -157,7 +158,6 @@ export default function Withdraw(props) {
               confirmAlert({
                 customUI: ({ onClose }) => {
                   return (
-
                     <div className='confirm-box'>
                       <h1>WITHDRAW FEE</h1>
                       <p>Check the current withdraw fee carefully, the relayer will deduce fee from your withdrawal amount</p>
@@ -193,7 +193,6 @@ export default function Withdraw(props) {
                         <div className='fee-key'>You get</div>
                         <div className='fee-value'>{formatAmount(withdrawAmount - body.totalFee, 2)} {currency.toUpperCase()}</div>
                       </div>
-
 
                       <button className='confirm-button'
                         onClick={async () => {
@@ -238,7 +237,8 @@ export default function Withdraw(props) {
                               if (!error && response.statusCode == 200) {
                                 // ###### 处理服务器反馈
                                 toast.success(body.msg);
-                                if(orderStatus === 0) setRecipient('');
+                                // if(orderStatus === 0) setRecipient('');
+                                setRunning(false);
                               } else {
                                 toast.warning(body.msg);
                                 // console.log(body)
@@ -247,9 +247,6 @@ export default function Withdraw(props) {
                           } catch (err) {
                             setRunning(false)
                           }
-
-
-
                           
                           onClose();
                           setRunning(false);
@@ -275,15 +272,6 @@ export default function Withdraw(props) {
         setRunning(false)
       }
     }
-
-
-
-
-
-
-
-
-
   }
 
   const endorse = async (currentNote) => {
@@ -453,7 +441,7 @@ export default function Withdraw(props) {
       setEffectiveTime(noteDetails.effectiveTime * 1);
       const dt = new Date(noteDetails.effectiveTime * 1000);
       setEffectiveTimeString(dt.toLocaleDateString() + " " + dt.toLocaleTimeString());
-      setRecipient(noteDetails.orderStatus * 1 === 0 ? '' : noteDetails.recipient);
+      setRecipient(noteDetails.orderStatus * 1 === 0 ? accounts[0] : noteDetails.recipient);
       setEndorseAmount(noteDetails.amount - noteDetails.totalWithdraw);
       setLoading(false);
       setShowContent(true);
@@ -516,11 +504,12 @@ export default function Withdraw(props) {
 
           {!showContent ? '':
           <div>
+            {simpleVersion ? '': 
             <div className="recipient-line">
               <div className="key">Type</div>
               <div className="value">{orderStatus === 2 ? '-': orderStatus === 1 ? 'Cheque to Order':'Cheque to Bearer'}</div>
             </div>
-
+            }
             <div className="recipient-line">
               <div className="key">Deposit Amount</div>
               <div className="value">{loading ? <FontAwesomeIcon icon={faSpinner} spin/> : formatAmount(depositAmount, 0)} {currency}</div>
@@ -550,22 +539,22 @@ export default function Withdraw(props) {
             </div>
             : ''}
 
-            {effectiveTime * 1000 > (new Date()).getTime() && orderStatus === 0 ? '' :
-            <div>
-              {orderStatus === 0 ? 
-                <div>
-                <div className="font1">Withdraw address</div>
-                <input className="withdraw-input withdraw-address" value={recipient} onChange={(e) => setRecipient(e.target.value)}/>
-                </div>
-                :
-                <div>
-                <div className="font1">Withdraw address (To order)</div>
-                <input className="withdraw-input withdraw-address" value={recipient} readOnly/>
-                </div>
-              }
-            </div>
+            {simpleVersion ? '' :
+              effectiveTime * 1000 > (new Date()).getTime() && orderStatus === 0 ? '' :
+              <div>
+                {orderStatus === 0 ? 
+                  <div>
+                  <div className="font1">Withdraw address</div>
+                  <input className="withdraw-input withdraw-address" value={recipient} onChange={(e) => setRecipient(e.target.value)}/>
+                  </div>
+                  :
+                  <div>
+                  <div className="font1">Withdraw address (To order)</div>
+                  <input className="withdraw-input withdraw-address" value={recipient} readOnly/>
+                  </div>
+                }
+              </div>
             }
-
             {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) && recipient !== '' ?
             running ? 
             <div className="button-deposit unavailable">
@@ -580,9 +569,10 @@ export default function Withdraw(props) {
               Withdraw
             </div>
             }
-
+            
             {/* Endorsement Start */}
-            {balance <= 0 || (orderStatus === 1 && accounts[0] !== recipient) ? '' :
+            {simpleVersion ? '' :
+            balance <= 0 || (orderStatus === 1 && accounts[0] !== recipient) ? '' :
             <SelectBox 
               status={endorseUI}
               description="Open a new cheque without withdrawal"
@@ -652,7 +642,6 @@ export default function Withdraw(props) {
               </div>
             }
             {/* Endorsement Start */}
-
             <div className="empty-gap"></div>
             </div>
           }

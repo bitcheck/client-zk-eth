@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {addressConfig, netId} from "../config.js";
+import {addressConfig, netId, simpleVersion} from "../config.js";
 import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faTimes, faFrown } from '@fortawesome/free-solid-svg-icons';
@@ -307,6 +307,8 @@ export default function Deposit(props) {
           </div> 
           :
           <div>
+            {simpleVersion ? '' :
+            <div>
             <SelectBox 
               status={effectiveTimeStatus}
               description="Set effective date and time"
@@ -335,7 +337,8 @@ export default function Deposit(props) {
               <input className="withdraw-input withdraw-address" value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)}/>
             </div>
             : ""}
-
+            </div>
+            }
             <SelectBox 
               status={selectStatus}
               description="Separated into 3-5 parts to deposit"

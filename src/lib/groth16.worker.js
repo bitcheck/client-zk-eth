@@ -127,7 +127,7 @@ export default (self) => {
         // console.log("Worker => boss", "CALC_H");
         self.postMessage(data.result, [data.result]);
     } else if (data.command === "TERMINATE") {
-        console.log('进程终止')
+        // console.log('进程终止')
         process.exit();
     }    
   });

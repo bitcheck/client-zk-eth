@@ -77,7 +77,7 @@ async function build(params) {
             } else {
                 data = e;
             }
-            console.log("---获取错误消息---", data);
+            // console.log("---获取错误消息---", data);
             groth16.working[i]=false;
             groth16.pendingDeferreds[i].resolve(data);
             groth16.processWorks();
