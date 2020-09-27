@@ -70,7 +70,7 @@ export const cleanLocalStorage = (eventsContract, notekeysLocal, depositArray) =
     }
     if(!has) deleteNotekeyArray.push(notekeysLocal[i])
   }
-  console.log("AAAAAA", deleteNotekeyArray);
+  // console.log("AAAAAA", deleteNotekeyArray);
   for(let i = 0; i < deleteNotekeyArray.length; i++) eraseNoteString(deleteNotekeyArray[i]);
 }
 
@@ -87,7 +87,7 @@ export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, web3)
   let netIdArray = [];
   let depositArray = [];
   const withdrawals = await loadWithdrawArray(noteArray, shaker, web3);
-  console.log('####', withdrawals);
+  // console.log('####', withdrawals);
   try {
     for(let i = 0; i < noteArray.length; i++) {
       const { currency, amount, netId, deposit } = parseNote(noteArray[i]);
@@ -157,7 +157,7 @@ export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, web3)
         })
       }
     }
-    console.log("4444", re)
+    // console.log("4444", re)
     return re;
   } catch(e) {
     console.error('loadDepositData', e)
