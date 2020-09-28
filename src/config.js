@@ -12,7 +12,7 @@ export const addressConfig = {
   net_4: {
     // Rinkeby
     USDTAddress: "0x79C6B89D0C939e6D1C45Aa384C321bf668752624",
-    ERC20ShakerAddress: "0xbC1D5a6bAD84416ad18e3ABf4A1425eb958A8901",
+    ERC20ShakerAddress: "0x56ad85B2BF15CFBC9AD8580E07Cf4A0b1c339B56",
     ETHShakerAddress: "0x2794669bd766AB95fD6F2Ed9A4c534b12c809041",
   }
 }
@@ -26,5 +26,5 @@ export const coins = [100, 300, 800, 3000, 4000, 8000, 30000, 130000, 300000, 40
 export const relayerURLs = [
   'http://127.0.0.1:8010'
 ]
-export const simpleVersion = false; // If simple version, no effectiveTime, no to order cheque, no endorsement etc.
+export const simpleVersion = true; // If simple version, no effectiveTime, no to order cheque, no endorsement etc.
 export const callRelayer = false; // If use relayer to withdraw

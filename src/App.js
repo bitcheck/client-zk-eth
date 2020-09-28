@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import './App.css';
 import { useWeb3 } from '@openzeppelin/network/react';
 import Deposit from './components/Deposit.js';
@@ -11,6 +11,17 @@ import {defaultRPC, infuraId} from './config.js';
 
 function App() {
   const web3Context = useWeb3(`wss://${defaultRPC}${infuraId}`);
+
+  useEffect(() => {
+    let loading = document.getElementById('i-loading')
+    if (loading) {
+      loading.setAttribute('class', 'i-loading-out')
+      setTimeout(() => {
+        loading.style.display = 'none'
+      }, 1000)
+    }
+  }, [])
+
   return (
   <div className="App">
     <div>

@@ -119,10 +119,10 @@ export default function Withdraw(props) {
 
   const withdraw = async () => {
     if(!inputValidate()) return;
-    setRunning(true);
     
     if(!callRelayer) {
       // Operate from local
+      setRunning(true);
       const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
       const { proof, args } = await getWithdrawProof(deposit, recipient, 0, toWeiString(withdrawAmount, decimals));
       args.push(deposit.commitmentHex);
