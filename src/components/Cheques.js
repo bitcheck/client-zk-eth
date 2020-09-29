@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {ERC20ShakerAddress, addressConfig, netId} from "../config.js";
+import {ERC20ShakerAddress, addressConfig, netId, erc20ShakerVersion, logo} from "../config.js";
 import {formatAmount, formatAccount, getNoteDetailsArray} from "../utils/web3.js";
 import {batchSaveNotes} from "../utils/localstorage.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -22,7 +22,7 @@ export default function Cheques(props) {
   const type = 0;
   const web3 = lib;
 
-  const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
+  const erc20ShakerJson = erc20ShakerVersion === 'V1' ? require('../contracts/abi/ERC20Shaker.json') : require('../contracts/abi/ERC20Shaker' + erc20ShakerVersion + '.json');
   const shaker = new web3.eth.Contract(erc20ShakerJson.abi, addressConfig["net_"+netId].ERC20ShakerAddress)
 
  const requestAccess = useCallback(() => requestAuth(web3Context), []);
@@ -50,7 +50,7 @@ export default function Cheques(props) {
     setCheques([]);
 
     // 调用本地localStorage存储
-    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type);
+    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type, logo);
     // console.log("0000", noteKeys, noteArray);
     if(noteArray.length === 0) {
       setCheques([]);
@@ -146,7 +146,7 @@ export default function Cheques(props) {
             <button className='confirm-button'
               onClick={() => {
                 if(importNotes === undefined || importNotes === "") return;
-                const nums = batchSaveNotes(importNotes, accounts[0]);
+                const nums = batchSaveNotes(importNotes, accounts[0], logo);
                 if(nums > 0) {
                   toast.success(`${nums} notes have been imported successfully.`);
                   load();
@@ -172,7 +172,7 @@ export default function Cheques(props) {
     if(notes !== "") importNotes = notes;
   }
   const getExportCheques = () => {
-    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type);
+    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type, logo);
     let re = [];
     for(let i = 0; i < noteKeys.length; i++) {
       re.push(noteKeys[i] + ":" + noteArray[i]);

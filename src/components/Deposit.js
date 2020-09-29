@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {addressConfig, netId, simpleVersion} from "../config.js";
+import {addressConfig, netId, simpleVersion, erc20ShakerVersion, logo} from "../config.js";
 import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faTimes, faFrown } from '@fortawesome/free-solid-svg-icons';
@@ -36,7 +36,7 @@ export default function Deposit(props) {
 
   const web3 = lib;
   const erc20Json = require('../contracts/abi/ERC20.json')
-  const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
+  const erc20ShakerJson = erc20ShakerVersion === 'V1' ? require('../contracts/abi/ERC20Shaker.json') : require('../contracts/abi/ERC20Shaker' + erc20ShakerVersion + '.json');
   const ERC20ShakerAddress = addressConfig["net_"+netId].ERC20ShakerAddress;
   const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
   const erc20 = new web3.eth.Contract(erc20Json, addressConfig["net_"+netId].USDTAddress);
@@ -123,7 +123,7 @@ export default function Deposit(props) {
     for(let i = 0; i < combination.length; i++) {
       const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
       const note = toHex(deposit.preimage, 62) //获取零知识证明
-      const noteString = `shaker-${symbol.toLowerCase()}-${combination[i]}-${netId}-${note}` //零知识证明Note
+      const noteString = `${logo}-${symbol.toLowerCase()}-${combination[i]}-${netId}-${note}` //零知识证明Note
       // console.log(noteString);
       noteStrings.push(noteString);
       commitments.push(deposit.commitmentHex);

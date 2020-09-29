@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faFrown, faLock, faBookmark, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {addressConfig, netId, callRelayer, relayerURLs, decimals, simpleVersion} from "../config.js";
+import {addressConfig, netId, callRelayer, relayerURLs, decimals, simpleVersion, erc20ShakerVersion, logo } from "../config.js";
 import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress, fromWeiString} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage.js";
@@ -47,7 +47,7 @@ export default function Withdraw(props) {
   const [gasPrice, setGasPrice] = useState(0);
   const [ethBalance, setEthBalance] = useState(0);
 
-  const erc20ShakerJson = require('../contracts/abi/ERC20Shaker.json')
+  const erc20ShakerJson = erc20ShakerVersion === 'V1' ? require('../contracts/abi/ERC20Shaker.json') : require('../contracts/abi/ERC20Shaker' + erc20ShakerVersion + '.json');
   const shaker = new web3.eth.Contract(erc20ShakerJson.abi, addressConfig["net_"+netId].ERC20ShakerAddress)
   let suportWebAssembly = false;
   let noteCopied = false;
@@ -114,7 +114,10 @@ export default function Withdraw(props) {
       accounts[0]
     );
     if(proof) return { proof, args };
-    else toast.error('Device Memory is exhausted, please reload.');
+    else {
+      toast.error('Device Memory is exhausted, please reload.');
+      return;
+    }
   }
 
   const withdraw = async () => {
@@ -123,8 +126,9 @@ export default function Withdraw(props) {
     if(!callRelayer) {
       // Operate from local
       setRunning(true);
-      const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
+      const { logo, deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
       const { proof, args } = await getWithdrawProof(deposit, recipient, 0, toWeiString(withdrawAmount, decimals));
+
       args.push(deposit.commitmentHex);
       const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
       console.log("Estimate GAS", gas);
@@ -235,7 +239,7 @@ export default function Withdraw(props) {
                             }, function(error, response, body) {
                               // console.log('=====', error, response, body);
                               if (!error && response.statusCode == 200) {
-                                // ###### 处理服务器反馈
+                                // 处理服务器反馈
                                 toast.success(body.msg);
                                 // if(orderStatus === 0) setRecipient('');
                                 setRunning(false);
@@ -296,7 +300,7 @@ export default function Withdraw(props) {
     // Generate new commitment
     const newDeposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
     const note = toHex(newDeposit.preimage, 62) //获取零知识证明
-    const noteString = `shaker-${currency.toLowerCase()}-${endorseAmount}-${netId}-${note}` //零知识证明Note
+    const noteString = `${logo}-${currency.toLowerCase()}-${endorseAmount}-${netId}-${note}` //零知识证明Note
     const et = endorseEffectiveTimeStatus === 1 ? endorseEffectiveTime : effectiveTime;
     args.push(deposit.commitmentHex, newDeposit.commitmentHex, et);
     // console.log("======", args);
@@ -424,7 +428,7 @@ export default function Withdraw(props) {
   }, [note]);
 
   const onNoteChange = async () => {
-    if(note.substring(0, 6) !== "shaker") {
+    if(note.substring(0, note.indexOf('-')) !== logo) {
       setShowContent(false);
       return;
     }
@@ -595,7 +599,6 @@ export default function Withdraw(props) {
               </div>
               {/* : ""} */}
 
-              {/* ###### */}
               {effectiveTime * 1000 > (new Date()).getTime() ? "" :
               <SelectBox 
                 status={endorseEffectiveTimeStatus}

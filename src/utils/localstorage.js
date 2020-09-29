@@ -1,3 +1,4 @@
+
 function getRandomCode(length) {
   if (length > 0) {
      var data = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
@@ -31,7 +32,7 @@ export const saveNoteString = (account, noteString, type = 0) => {
   } else return 0;
 }
 
-export const getNoteStrings = (account, netId, type) => {
+export const getNoteStrings = (account, netId, type, logo) => {
   var keys = [];
   var values = [];
   for(let i = 0; i < localStorage.length; i++) {
@@ -39,7 +40,7 @@ export const getNoteStrings = (account, netId, type) => {
     const value = localStorage[key];
     const net = value.split('-')[3];
     const symbol = value.split('-')[0];
-    if(parseInt(net) === netId && symbol === "shaker") {
+    if(parseInt(net) === netId && symbol === logo) {
       if(type === 0) {
         if(checkNoteKeyFormat(key, account, "note")) {
           values.push(localStorage[key]);
@@ -61,22 +62,22 @@ const checkNoteKeyFormat = (note, account, keyword) => {
   if(noteKey[0] === account && noteKey[1] === keyword) return true;
   else return false;
 }
-const checkNoteFormat = (note) => {
+const checkNoteFormat = (note, logo) => {
   const noteParts = note.split('-');
-  if(noteParts.length === 5 && noteParts[0] === 'shaker') return true;
+  if(noteParts.length === 5 && noteParts[0] === logo) return true;
   else return false;
 }
 export const eraseNoteString = (key) => {
   localStorage.removeItem(key);
 }
 
-export const batchSaveNotes = (notes, account) => {
+export const batchSaveNotes = (notes, account, logo) => {
   const notesArray = notes.split(',');
   let waitToStore = [];
   for(let i = 0; i < notesArray.length; i++) {
     const key = notesArray[i].split(':')[0];
     const note = notesArray[i].split(':')[1];
-    if(checkNoteFormat(note) && key.split('_')[0] === account) {
+    if(checkNoteFormat(note, logo) && key.split('_')[0] === account) {
       // 检测是否与现有note冲突，且账号相符
       let has = false;
       for(let j = 0; j < localStorage.length; j++) {

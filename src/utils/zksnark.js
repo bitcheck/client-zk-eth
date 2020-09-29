@@ -1,4 +1,4 @@
-import {merkleTreeHeight} from "../config.js";
+import {merkleTreeHeight, erc20ShakerVersion} from "../config.js";
 import merkleTree from "../lib/MerkleTree.js";
 import buildGroth16 from "../lib/groth16_browser";
 import snarkjs from 'snarkjs';
@@ -28,7 +28,8 @@ export const rbigint = nbytes => snarkjs.bigInt.leBuff2int(crypto.randomBytes(nb
  * @param noteString the note
  */
 export function parseNote(noteString) {
-  const noteRegex = /shaker-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
+  // const noteRegex = /shaker-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
+  const noteRegex = /(?<logo>\w+)-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
   const match = noteRegex.exec(noteString)
   if (!match) {
     throw new Error('The note has invalid format')
@@ -40,7 +41,7 @@ export function parseNote(noteString) {
   const deposit = createDeposit({ nullifier, secret })
   const netId = Number(match.groups.netId)
 
-  return { currency: match.groups.currency, amount: match.groups.amount, netId, deposit }
+  return { logo: match.groups.logo, currency: match.groups.currency, amount: match.groups.amount, netId, deposit }
 }
 
 /**
@@ -66,7 +67,18 @@ export function createDeposit({ nullifier, secret }) {
  */
 export async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, refund = 0 }, shaker, proving_key, account) {
   // Compute merkle proof of our commitment
-  const { root, path_elements, path_index } = await generateMerkleProof(deposit, shaker, account)
+  let merkleProof;
+  if(erc20ShakerVersion === 'V1') {
+    merkleProof = await generateMerkleProof(deposit, shaker, account)
+  } else {
+    const tree = new merkleTree(20, [])
+    merkleProof = await tree.path(0)
+  }
+  const root = merkleProof.root
+  const path_elements = merkleProof.path_elements
+  const path_index = merkleProof.path_index
+  console.log('======', merkleProof)
+
   // Prepare circuit input
   // 电路的配置模版见/circuits/withdraw.circom
   const input = {
@@ -91,7 +103,9 @@ export async function generateProof({ deposit, recipient, relayerAddress = 0, fe
     console.time('Proof time')
     const groth16 = await buildGroth16();
     const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
+    console.log("====1====")
     proof = websnarkUtils.toSolidityInput(proofData).proof;
+    console.log("====2====", proof)
     console.timeEnd('Proof time')  
   } catch (err) {
     return { proof: false, args: false };
@@ -122,7 +136,6 @@ async function generateMerkleProof(deposit, shaker, account) {
   const leaves = events
     .sort((a, b) => a.returnValues.leafIndex - b.returnValues.leafIndex) // Sort events in chronological order
     .map(e => e.returnValues.commitment)
-  // console.log("leaves: ", leaves);
   const tree = new merkleTree(merkleTreeHeight, leaves)
 
   // Find current commitment in the tree
