@@ -34,6 +34,7 @@ export default function Withdraw(props) {
   const [effectiveTimeString, setEffectiveTimeString] = useState('');
   const [recipient, setRecipient] = useState('');
   const [showContent, setShowContent] = useState(false);
+  const [provingKey, setProvingKey] = useState('');
 
   const [endorseEffectiveTimeStatus, setEndorseEffectiveTimeStatus] = useState(0);
   const [endorseEffectiveTime, setEndorseEffectiveTime] = useState(parseInt((new Date()).valueOf() / 1000));
@@ -94,14 +95,16 @@ export default function Withdraw(props) {
   const init = async () => {
     setGasPrice(await getGasPrice());
     setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
-
+    if(provingKey === ''){
+      const url = getUrl();
+      const proving_key = await (await fetch(`${url}/circuits/withdraw_proving_key.bin`, {cache: 'default'})).arrayBuffer();
+      setProvingKey(proving_key);
+    }
   }
   const requestAccess = useCallback(() => requestAuth(web3Context), []);
 
   const getWithdrawProof = async (deposit, recipient, fee, amount) => {
     // fee, amount must be wei or with decimal string
-    const url = getUrl();
-    const proving_key = await (await fetch(`${url}/circuits/withdraw_proving_key.bin`)).arrayBuffer();
 
     const { proof, args } = await generateProof({ 
       deposit, 
@@ -110,7 +113,7 @@ export default function Withdraw(props) {
       refund: amount,
     }, 
       shaker, 
-      proving_key,       
+      provingKey,       
       accounts[0]
     );
     if(proof) return { proof, args };

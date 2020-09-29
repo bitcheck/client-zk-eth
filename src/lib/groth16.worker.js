@@ -55,7 +55,7 @@ export default (self) => {
           })
         } catch(err) {
           console.log("=== INIT Error ===", err.message);
-          self.postMessage({ data: 999 })
+          // self.postMessage({ data: 999 })
         }
       } else if (data.command === "G1_MULTIEXP") {
 
@@ -124,15 +124,10 @@ export default (self) => {
 
         data.result = getBin(pPolA2+domainSize*32, domainSize*32);
         i32[0] = oldAlloc;
-        // console.log("Worker => boss", "CALC_H");
         self.postMessage(data.result, [data.result]);
     } else if (data.command === "TERMINATE") {
         // console.log('进程终止')
-        process.exit();
+        // process.exit();
     }    
   });
-
-  // self.onmessage = function(e) {
-
-  // };
 }

@@ -83,5 +83,6 @@
 
 ### 2020-9-29
 ### 0.10.14
-* 启动V2，即去掉Merkle树方案
+* 启动V2，即优化Merkle树方案
 * 添加任意变化note的logo功能
+* 优化网络传输，降低withdraw_proving_key的传输频次
