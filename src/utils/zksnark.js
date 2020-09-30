@@ -77,7 +77,6 @@ export async function generateProof({ deposit, recipient, relayerAddress = 0, fe
   const root = merkleProof.root
   const path_elements = merkleProof.path_elements
   const path_index = merkleProof.path_index
-  console.log('======', merkleProof)
 
   // Prepare circuit input
   // 电路的配置模版见/circuits/withdraw.circom
@@ -103,9 +102,7 @@ export async function generateProof({ deposit, recipient, relayerAddress = 0, fe
     console.time('Proof time')
     const groth16 = await buildGroth16();
     const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
-    console.log("====1====")
     proof = websnarkUtils.toSolidityInput(proofData).proof;
-    console.log("====2====", proof)
     console.timeEnd('Proof time')  
   } catch (err) {
     return { proof: false, args: false };

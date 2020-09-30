@@ -27,6 +27,7 @@ export const saveNoteString = (account, noteString, type = 0) => {
   }
   if(!has) {
     const key = account + "_" + keyword + "_" + getRandomCode(32);
+    console.log(account, noteString, key);
     localStorage[key] = noteString;
     return key;  
   } else return 0;

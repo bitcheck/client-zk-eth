@@ -1,6 +1,5 @@
 export const defaultRPC = "mainnet.infura.io/ws/v3/";
 export const infuraId = "3446259cb0e74d68b614f9a10328a368";
-export const netId = 4;
 
 /**
  * Version Controller
@@ -12,9 +11,17 @@ export const callRelayer = false;
 // V1 smart contract using merkle tree for each deposit, takes high gas. V2 will rollup several deposits and insert them into merkle tree once, then the gas charge will be deduce averagely. V2 will operate the deposit and withdraw on server and do rollup for each 10 deposits/withdraw.
 export const erc20ShakerVersion = 'V1'; // ######
 // First symbol of note, don't use '-' character inside the logo
-export const logo = 'shaker'; //
+export const notePrefix = 'cashnova'; //
+export const appName = 'CashNova';
 
 export const addressConfig = {
+  net_1: {
+    USDTAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    ERC20ShakerAddress: erc20ShakerVersion === 'V1' ? 
+      "0xF9F88807690117b31491E34A4863c01303394a34" : 
+      "",
+    ETHShakerAddress: "0x6D1Af6e1654820d1550e991A03F49409888297D7",
+  },
   net_2000: {
     // Localhost ganache
     USDTAddress: "0x459DcF5F0b3CAD48D28A465ffcDd844C2c2D630a",

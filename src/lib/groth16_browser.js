@@ -339,12 +339,6 @@ class Groth16 {
 
 
         const pH = this.calcH(signals.slice(0), polsA, polsB, nSignals, domainSize).then( (h) => {
-            /* Debug code to print the result of h
-            for (let i=0; i<domainSize; i++) {
-                const a = this.bin2int(h.slice(i*32, i*32+32));
-                console.log(i + " -> " + a.toString());
-            }
-*/
             return this.g1_multiexp(h, pointsHExps);
         });
 

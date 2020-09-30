@@ -1,11 +1,11 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {addressConfig, netId, simpleVersion, erc20ShakerVersion, logo} from "../config.js";
+import {simpleVersion, notePrefix} from "../config.js";
 import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faTimes, faFrown } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {toWeiString, fromWeiString, formatAmount, formatAccount, getGasPrice, getERC20Symbol, getNoteShortStrings} from "../utils/web3";
+import {toWeiString, fromWeiString, formatAmount, formatAccount, getGasPrice, getERC20Symbol, getNoteShortStrings, connect} from "../utils/web3";
 import {getCombination} from "../utils/devide.js";
 import {depositAmounts, decimals} from "../config.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage";
@@ -18,7 +18,7 @@ import "./style.css";
 
 export default function Deposit(props) {
   const {web3Context} = props;
-  const {accounts, lib} = web3Context;
+  const {accounts, lib: web3, networkId} = web3Context;
   const [selectedId, setSelectedId] = useState("0");
   const [depositAmount, setDepositAmount] = useState(depositAmounts[0]);
   const [isApproved, setIsApproved] = useState(false);
@@ -33,23 +33,17 @@ export default function Deposit(props) {
   const [symbol, setSymbol] = useState('USDT');
   const [gasPrice, setGasPrice] = useState(0);
   const [outOfGas, setOutOfGas] = useState(false);
-
-  const web3 = lib;
-  const erc20Json = require('../contracts/abi/ERC20.json')
-  const erc20ShakerJson = erc20ShakerVersion === 'V1' ? require('../contracts/abi/ERC20Shaker.json') : require('../contracts/abi/ERC20Shaker' + erc20ShakerVersion + '.json');
-  const ERC20ShakerAddress = addressConfig["net_"+netId].ERC20ShakerAddress;
-  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress)
-  const erc20 = new web3.eth.Contract(erc20Json, addressConfig["net_"+netId].USDTAddress);
-
+  const [netId, setNetId] = useState(1);
+  const [shaker, setShaker] = useState();
+  const [erc20, setErc20] = useState();
+  const [ERC20ShakerAddress, setERC20ShakerAddress] = useState('');
   let noteCopied = false;
 
   useEffect(() => {
     if(accounts && accounts.length > 0) {
-      // console.log(accounts[0]);
-      // console.log("Deposit");
       init();
     }
-  },[accounts])
+  },[accounts, networkId])
 
   const requestAuth = async web3Context => {
     try {
@@ -61,31 +55,43 @@ export default function Deposit(props) {
 
   const init = async () => {
     setLoading(true);
+    const conn = await connect(web3);
+    if(!conn) {
+      toast.error('Can only use Mainnet or Rinkeby Testnet');
+      setOutOfGas(true);
+      return;
+    }
+    const netId = conn.netId;
+    setNetId(netId);
+    setShaker(conn.shaker);
+    const erc20 = conn.erc20;
+    setErc20(conn.erc20);
+    const ERC20ShakerAddress = conn.ERC20ShakerAddress;
+    setERC20ShakerAddress(ERC20ShakerAddress);
+  
     const ethBalance = web3.utils.fromWei(await web3.eth.getBalance(accounts[0]));
-    if(parseFloat(ethBalance) === 0.1) {
+    if(parseFloat(ethBalance) < 0.1) {
       setOutOfGas(true);
       return;
     } else {
       setOutOfGas(false);
     }
-    setIsApproved(await checkAllowance(depositAmount));
+    setIsApproved(await checkAllowance(depositAmount, ERC20ShakerAddress));
     setEthBalance(ethBalance);
-    setUsdtBalance(fromWeiString(await getERC20Balance(accounts[0]), decimals));
+    setUsdtBalance(fromWeiString(await erc20.methods.balanceOf(accounts[0]).call(), decimals));
     setGasPrice(await getGasPrice());
     setSymbol(await getERC20Symbol(erc20));
     setLoading(false);
-}
-  const getERC20Balance = async(account) => {
-    return await erc20.methods.balanceOf(account).call();
   }
-  const requestAccess = useCallback(() => requestAuth(web3Context), []);
+  
+  const requestAccess = useCallback(() => requestAuth(web3Context), [web3Context]);
 
   const buttonSelected = async (e) => {
     setSelectedId(e.id);
     const amount = depositAmounts[parseInt(e.id)];
     setDepositAmount(amount);
 
-    setIsApproved(await checkAllowance(amount));
+    setIsApproved(await checkAllowance(amount, ERC20ShakerAddress));
   }
 
   const deposit = async () => {
@@ -109,7 +115,7 @@ export default function Deposit(props) {
       return;
     }
 
-    const netId = await web3.eth.net.getId();
+    // const netId = await web3.eth.net.getId();
     let combination;
     if(selectStatus === 1) {
       combination = getCombination(depositAmount);
@@ -123,7 +129,7 @@ export default function Deposit(props) {
     for(let i = 0; i < combination.length; i++) {
       const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
       const note = toHex(deposit.preimage, 62) //获取零知识证明
-      const noteString = `${logo}-${symbol.toLowerCase()}-${combination[i]}-${netId}-${note}` //零知识证明Note
+      const noteString = `${notePrefix}-${symbol.toLowerCase()}-${combination[i]}-${netId}-${note}` //零知识证明Note
       // console.log(noteString);
       noteStrings.push(noteString);
       commitments.push(deposit.commitmentHex);
@@ -136,7 +142,7 @@ export default function Deposit(props) {
     const et = effectiveTimeStatus === 1 ? effectiveTime : parseInt((new Date().getTime()) / 1000);
     // console.log(("------>", et));
     const gas = await shaker.methods.depositERC20Batch(amounts, commitments, orderStatus, withdrawAddr, et).estimateGas({ from: accounts[0], gas: 10e6});
-    console.log("Estimate GAS", gas);
+    // console.log("Estimate GAS", gas);
     const noteShortStrings = getNoteShortStrings(noteStrings);
 
     // 弹出对话框，确认GAS费，拆分方案，与noteString，并要求复制后才能进行下一步
@@ -160,7 +166,7 @@ export default function Deposit(props) {
                 }
                 // Check eth for gas is enough?
                 if(gas * gasPrice * 1.1 / 1e9 > parseFloat(ethBalance)) {
-                  toast.error('Your ETH balance is not enough for the GAS Fee');
+                  toast.error('Network is not workable or your ETH balance is not enough for the GAS Fee');
                   return;
                 }
                 doDeposit(amounts, commitments, noteStrings, gas); 
@@ -190,6 +196,7 @@ export default function Deposit(props) {
     let keys = [];
     try {
       // Save to localStorage
+      console.log('添加localstorage', noteStrings.length);
       for(let i = 0; i < noteStrings.length; i++) keys.push(saveNoteString(accounts[0], noteStrings[i]));
       const et = effectiveTimeStatus === 1 ? effectiveTime : parseInt((new Date().getTime()) / 1000);
       // console.log("=====> ", amounts);
@@ -199,17 +206,16 @@ export default function Deposit(props) {
       // console.log(err);
       toast.error("#" + err.code + ", " + err.message);
       // 如果出错，删除刚刚生成的LocalStorage key
+      console.log('删除localstorage');
       for(let i = 0; i < keys.length; i++) eraseNoteString(keys[i]);
       setLoading(false);
     }
   }
 
-  const checkAllowance = async(depositAmount) => {
+  const checkAllowance = async(depositAmount, ERC20ShakerAddress) => {
     try {
       let allowance = await erc20.methods.allowance(accounts[0], ERC20ShakerAddress).call({ from: accounts[0] });
-      console.log("allowance", allowance);
       allowance = fromWeiString(allowance, decimals);
-      console.log("allowance", allowance);
       return allowance >= depositAmount;
     } catch (err) {
       // Out of gas
@@ -220,6 +226,7 @@ export default function Deposit(props) {
   const setAllowance = async() => {
     // Approve 200000 once to avoid approve amount everytime.
     setLoading(true);
+    console.log('====', ERC20ShakerAddress);
     try {
       await erc20.methods.approve(ERC20ShakerAddress, toWeiString(200000, decimals)).send({ from: accounts[0], gas: 2e6 })
       setIsApproved(true);
@@ -272,8 +279,7 @@ export default function Deposit(props) {
           <div className="value">{formatAmount(gasPrice, 0)} GWei</div>
         </div>
 
-
-        {outOfGas ? <div className="font1"><FontAwesomeIcon icon={faFrown}/> Your ETH is not enough for Gas fee, suggest to have 0.5ETH at least</div>
+        {outOfGas ? <div className="font1"><FontAwesomeIcon icon={faFrown}/> Network is unavailable or your ETH balance is not enough for Gas fee, suggest to have 0.1ETH at least</div>
 : 
         <div>
           <div className="font1">Select deposit amount</div>

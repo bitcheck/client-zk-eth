@@ -1,11 +1,11 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import "./style.css";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faFrown, faLock, faBookmark, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faFrown, faLock, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {addressConfig, netId, callRelayer, relayerURLs, decimals, simpleVersion, erc20ShakerVersion, logo } from "../config.js";
-import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress, fromWeiString} from "../utils/web3.js";
+import {callRelayer, relayerURLs, decimals, simpleVersion, notePrefix } from "../config.js";
+import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress, connect} from "../utils/web3.js";
 import {parseNote, generateProof} from "../utils/zksnark.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage.js";
 import DateTimePicker from 'react-datetime-picker';
@@ -16,8 +16,7 @@ import * as request from 'request';
 
 export default function Withdraw(props) {
   const {web3Context} = props;
-  const {accounts, lib} = web3Context;
-  const web3 = lib;
+  const {accounts, lib: web3, networkId} = web3Context;
   const [withdrawAmount, setWithdrawAmount] = useState(0);
   const [depositAmount, setDepositAmount] = useState(0);
   const [depositTime, setDepositTime] = useState("-");
@@ -35,6 +34,8 @@ export default function Withdraw(props) {
   const [recipient, setRecipient] = useState('');
   const [showContent, setShowContent] = useState(false);
   const [provingKey, setProvingKey] = useState('');
+  const [netId, setNetId] = useState(1);
+  const [shaker, setShaker] = useState();
 
   const [endorseEffectiveTimeStatus, setEndorseEffectiveTimeStatus] = useState(0);
   const [endorseEffectiveTime, setEndorseEffectiveTime] = useState(parseInt((new Date()).valueOf() / 1000));
@@ -48,8 +49,6 @@ export default function Withdraw(props) {
   const [gasPrice, setGasPrice] = useState(0);
   const [ethBalance, setEthBalance] = useState(0);
 
-  const erc20ShakerJson = erc20ShakerVersion === 'V1' ? require('../contracts/abi/ERC20Shaker.json') : require('../contracts/abi/ERC20Shaker' + erc20ShakerVersion + '.json');
-  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, addressConfig["net_"+netId].ERC20ShakerAddress)
   let suportWebAssembly = false;
   let noteCopied = false;
 
@@ -83,16 +82,23 @@ export default function Withdraw(props) {
     checkWebAssemblySupport();
   },[suportWebAssembly])
 
-  useEffect(()=>{
+  useEffect(() => {
     if(accounts && accounts.length > 0) {
-      // console.log(accounts[0]);
       init();
       if(orderStatus === 0) setRecipient(accounts[0]);
-      // console.log("Withdraw");
     }
-  },[accounts])
+  },[accounts, networkId])
 
   const init = async () => {
+    const conn = await connect(web3);
+    if(!conn) {
+      toast.error('Can only use Mainnet or Rinkeby Testnet');
+      return;
+    }
+    const netId = conn.netId;
+    setNetId(netId);
+    setShaker(conn.shaker);
+
     setGasPrice(await getGasPrice());
     setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
     if(provingKey === ''){
@@ -101,7 +107,7 @@ export default function Withdraw(props) {
       setProvingKey(proving_key);
     }
   }
-  const requestAccess = useCallback(() => requestAuth(web3Context), []);
+  const requestAccess = useCallback(() => requestAuth(web3Context), [web3Context]);
 
   const getWithdrawProof = async (deposit, recipient, fee, amount) => {
     // fee, amount must be wei or with decimal string
@@ -129,12 +135,12 @@ export default function Withdraw(props) {
     if(!callRelayer) {
       // Operate from local
       setRunning(true);
-      const { logo, deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
+      const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
       const { proof, args } = await getWithdrawProof(deposit, recipient, 0, toWeiString(withdrawAmount, decimals));
 
       args.push(deposit.commitmentHex);
       const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
-      console.log("Estimate GAS", gas);
+      // console.log("Estimate GAS", gas);
       try {
         await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
         await onNoteChange();
@@ -160,7 +166,7 @@ export default function Withdraw(props) {
           }
         }, function(error, response, body) {
           console.log(error, response, body);
-            if (!error && response.statusCode == 200) {
+            if (!error && response.statusCode === 200) {
               // console.log(body) // 请求成功的处理逻辑
               confirmAlert({
                 customUI: ({ onClose }) => {
@@ -228,8 +234,6 @@ export default function Withdraw(props) {
                             toast.error('Device memory is exhausted, please reload.');
                             return;
                           }
-                          // console.log(params);
-                          console.log(toWeiString(body.totalFee, decimals), toWeiString(withdrawAmount, decimals));
                           try {
                             request({
                               url: relayerURLs[0] + "/withdraw/",
@@ -241,7 +245,7 @@ export default function Withdraw(props) {
                               body: params
                             }, function(error, response, body) {
                               // console.log('=====', error, response, body);
-                              if (!error && response.statusCode == 200) {
+                              if (!error && response.statusCode === 200) {
                                 // 处理服务器反馈
                                 toast.success(body.msg);
                                 // if(orderStatus === 0) setRecipient('');
@@ -303,7 +307,7 @@ export default function Withdraw(props) {
     // Generate new commitment
     const newDeposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
     const note = toHex(newDeposit.preimage, 62) //获取零知识证明
-    const noteString = `${logo}-${currency.toLowerCase()}-${endorseAmount}-${netId}-${note}` //零知识证明Note
+    const noteString = `${notePrefix}-${currency.toLowerCase()}-${endorseAmount}-${netId}-${note}` //零知识证明Note
     const et = endorseEffectiveTimeStatus === 1 ? endorseEffectiveTime : effectiveTime;
     args.push(deposit.commitmentHex, newDeposit.commitmentHex, et);
     // console.log("======", args);
@@ -431,7 +435,7 @@ export default function Withdraw(props) {
   }, [note]);
 
   const onNoteChange = async () => {
-    if(note.substring(0, note.indexOf('-')) !== logo) {
+    if(note.substring(0, note.indexOf('-')) !== notePrefix) {
       setShowContent(false);
       return;
     }

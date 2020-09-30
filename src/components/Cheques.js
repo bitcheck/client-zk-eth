@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import {ERC20ShakerAddress, addressConfig, netId, erc20ShakerVersion, logo} from "../config.js";
-import {formatAmount, formatAccount, getNoteDetailsArray} from "../utils/web3.js";
+import { notePrefix } from "../config.js";
+import {formatAmount, formatAccount, getNoteDetailsArray, connect} from "../utils/web3.js";
 import {batchSaveNotes} from "../utils/localstorage.js";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faSpinner, faTrash, faFrown, faDownload, faUpload, faLock } from '@fortawesome/free-solid-svg-icons';
@@ -15,17 +15,15 @@ import "./style.css";
 
 export default function Cheques(props) {
   const {web3Context} = props;
-  const {accounts, lib} = web3Context;
+  const {accounts, lib: web3, networkId} = web3Context;
   const [cheques, setCheques] = useState([]);
   const [chequeNotes, setChequeNotes] = useState('');
   const [isEmpty, setIsEmpty] = useState(false);
+  const [netId, setNetId] = useState(1);
   const type = 0;
-  const web3 = lib;
 
-  const erc20ShakerJson = erc20ShakerVersion === 'V1' ? require('../contracts/abi/ERC20Shaker.json') : require('../contracts/abi/ERC20Shaker' + erc20ShakerVersion + '.json');
-  const shaker = new web3.eth.Contract(erc20ShakerJson.abi, addressConfig["net_"+netId].ERC20ShakerAddress)
-
- const requestAccess = useCallback(() => requestAuth(web3Context), []);
+  let shaker;
+  const requestAccess = useCallback(() => requestAuth(web3Context), [web3Context]);
   const requestAuth = async web3Context => {
     try {
       await web3Context.requestAuth();
@@ -40,17 +38,26 @@ export default function Cheques(props) {
       // console.log("Cheques");
       load();
     }
-  }, [accounts])
+  }, [accounts, networkId])
 
   /**
    * Loading data from chain
    */
   const load = async()=> {
     setIsEmpty(false);
+    const conn = await connect(web3);
+    if(!conn) {
+      toast.error('Can only use Mainnet or Rinkeby Testnet');
+      return;
+    }
+    const netId = conn.netId;
+    setNetId(netId);
+    shaker = conn.shaker;
+
     setCheques([]);
 
     // 调用本地localStorage存储
-    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type, logo);
+    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type, notePrefix);
     // console.log("0000", noteKeys, noteArray);
     if(noteArray.length === 0) {
       setCheques([]);
@@ -146,7 +153,7 @@ export default function Cheques(props) {
             <button className='confirm-button'
               onClick={() => {
                 if(importNotes === undefined || importNotes === "") return;
-                const nums = batchSaveNotes(importNotes, accounts[0], logo);
+                const nums = batchSaveNotes(importNotes, accounts[0], notePrefix);
                 if(nums > 0) {
                   toast.success(`${nums} notes have been imported successfully.`);
                   load();
@@ -172,7 +179,7 @@ export default function Cheques(props) {
     if(notes !== "") importNotes = notes;
   }
   const getExportCheques = () => {
-    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type, logo);
+    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type, notePrefix);
     let re = [];
     for(let i = 0; i < noteKeys.length; i++) {
       re.push(noteKeys[i] + ":" + noteArray[i]);

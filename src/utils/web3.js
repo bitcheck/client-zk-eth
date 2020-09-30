@@ -1,8 +1,26 @@
 import {parseNote} from "./zksnark.js";
-import {decimals} from "../config.js";
+import {decimals, addressConfig, erc20ShakerVersion} from "../config.js";
 import {eraseNoteString} from "./localstorage.js";
 const { GasPriceOracle } = require('gas-price-oracle');
 
+export const connect = async(web3) => {
+  const netId = await web3.eth.net.getId();
+  if(netId === 1 || netId === 4) {
+    const ERC20ShakerAddress = addressConfig["net_"+netId].ERC20ShakerAddress;
+    const erc20Json = require('../contracts/abi/ERC20.json');
+    const erc20ShakerJson = erc20ShakerVersion === 'V1' ? require('../contracts/abi/ERC20Shaker.json') : require('../contracts/abi/ERC20Shaker' + erc20ShakerVersion + '.json');
+    const shaker = new web3.eth.Contract(erc20ShakerJson.abi, ERC20ShakerAddress);
+    const erc20 = new web3.eth.Contract(erc20Json, addressConfig["net_"+netId].USDTAddress);
+    return {
+      netId,
+      shaker,
+      erc20,
+      ERC20ShakerAddress
+    }
+  } else {
+    return false;
+  }
+}
 /**
  * Get withdrawal data from contract
  * @param {*} noteArray 
@@ -57,6 +75,7 @@ export const loadWithdrawArray = async (noteArray, shaker, web3) => {
 
 /**
  * Delete all the note key in localstorage which can not be found on chain.
+ * Has bugs, while the deposit is under confirmation, and refresh the list page, the localstorage will be deleted because can not find this new records on chain.
  */
 export const cleanLocalStorage = (eventsContract, notekeysLocal, depositArray) => {
   let deleteNotekeyArray = [];
@@ -107,7 +126,7 @@ export const getNoteDetailsArray = async (noteKeyArray, noteArray, shaker, web3)
     // console.log("2222", events)
 
     // Clean the useless note keys in localStorage
-    cleanLocalStorage(events, noteKeyArray, depositArray);
+    // cleanLocalStorage(events, noteKeyArray, depositArray);
 
     let re = [];
     for(let i = 0; i < events.length; i++) {
