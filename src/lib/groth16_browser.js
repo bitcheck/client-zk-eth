@@ -70,18 +70,20 @@ async function build(params) {
 
     // console.log('concurrency', concurrency);
     function getOnMsg(i) {
-        return function(e) {
-            let data;
-            if ((e)&&(e.data)) {
-                data = e.data;
-            } else {
-                data = e;
-            }
-            // console.log("---获取错误消息---", data);
-            groth16.working[i]=false;
-            groth16.pendingDeferreds[i].resolve(data);
-            groth16.processWorks();
-        };
+      return function(e) {
+        let data;
+        if ((e)&&(e.data)) {
+            data = e.data;
+        } else {
+            data = e;
+        }
+        if(data.data === 999)  {
+          groth16.pendingDeferreds[i].reject("Worker " + i + " is out of memory")
+        }
+        groth16.working[i]=false;
+        groth16.pendingDeferreds[i].resolve(data);
+        groth16.processWorks();
+      };
     }
 
     for (let i = 0; i < concurrency; i++) {
@@ -103,7 +105,7 @@ async function build(params) {
     }
     await Promise.all(initPromises);
     groth16.terminate();
-    // console.log(groth16);
+    // groth16.memory = null; // ######
     return groth16;
 }
 

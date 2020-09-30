@@ -7,13 +7,13 @@ import Cheques from './components/Cheques.js';
 import Notes from './components/Notes.js';
 import Menu from './components/Menu.js';
 import {HashRouter, Route, Switch} from 'react-router-dom';
-import {defaultRPC, infuraId, appName, erc20ShakerVersion} from './config.js';
+import {defaultRPC, infuraId, appName, erc20ShakerVersion, simpleVersion} from './config.js';
 
 function App() {
   const web3Context = useWeb3(`wss://${defaultRPC}${infuraId}`);
 
   useEffect(() => {
-    document.title = appName + " " + erc20ShakerVersion
+    document.title = appName + " " + (simpleVersion ? "": "Pro ") + erc20ShakerVersion
     let loading = document.getElementById('i-loading')
     if (loading) {
       loading.setAttribute('class', 'i-loading-out')

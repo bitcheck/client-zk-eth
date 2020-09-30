@@ -5,7 +5,7 @@ export const infuraId = "3446259cb0e74d68b614f9a10328a368";
  * Version Controller
  */
 // If simple version, no effectiveTime, no to order cheque, no endorsement etc.
-export const simpleVersion = true; 
+export const simpleVersion = false; 
 // If use relayer to withdraw
 export const callRelayer = false;
 // V1 smart contract using merkle tree for each deposit, takes high gas. V2 will rollup several deposits and insert them into merkle tree once, then the gas charge will be deduce averagely. V2 will operate the deposit and withdraw on server and do rollup for each 10 deposits/withdraw.

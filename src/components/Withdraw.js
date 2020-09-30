@@ -13,6 +13,7 @@ import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import { confirmAlert } from 'react-confirm-alert'; // Import
 import * as request from 'request';
+const axios = require('axios');
 
 export default function Withdraw(props) {
   const {web3Context} = props;
@@ -36,6 +37,8 @@ export default function Withdraw(props) {
   const [provingKey, setProvingKey] = useState('');
   const [netId, setNetId] = useState(1);
   const [shaker, setShaker] = useState();
+  const [loadingPercentage, setLoadingPercentage] = useState("0%");
+  const [loadingDisplay, setLoadingDisplay] = useState('block');
 
   const [endorseEffectiveTimeStatus, setEndorseEffectiveTimeStatus] = useState(0);
   const [endorseEffectiveTime, setEndorseEffectiveTime] = useState(parseInt((new Date()).valueOf() / 1000));
@@ -57,6 +60,9 @@ export default function Withdraw(props) {
       new WebAssembly.Memory({initial: 5000});
     } catch (e) {
       setSupportWebAssembly(false);
+      alert('Device Memory is exhausted, please reload.');
+      window.location.reload();
+      return;
     }
   }
 
@@ -101,17 +107,27 @@ export default function Withdraw(props) {
 
     setGasPrice(await getGasPrice());
     setEthBalance(web3.utils.fromWei(await web3.eth.getBalance(accounts[0])));
-    if(provingKey === ''){
-      const url = getUrl();
-      const proving_key = await (await fetch(`${url}/circuits/withdraw_proving_key.bin`, {cache: 'default'})).arrayBuffer();
-      setProvingKey(proving_key);
-    }
+    const url = getUrl();
+    const keyUrl = `${url}/circuits/withdraw_proving_key.bin`;
+    setLoadingDisplay('block');
+    const proving_key = await axios({
+      url: keyUrl,
+      method: 'GET',
+      onDownloadProgress (progress) {
+        setLoadingPercentage(Math.round(progress.loaded / progress.total * 100) + '%');
+      },
+      responseType: 'arraybuffer'
+    });
+
+    if(proving_key.status === 200) setProvingKey(proving_key.data);
+    else alert('Download fail, try again');
+    setLoadingDisplay('none');
   }
+
   const requestAccess = useCallback(() => requestAuth(web3Context), [web3Context]);
 
   const getWithdrawProof = async (deposit, recipient, fee, amount) => {
     // fee, amount must be wei or with decimal string
-
     const { proof, args } = await generateProof({ 
       deposit, 
       recipient, 
@@ -124,19 +140,28 @@ export default function Withdraw(props) {
     );
     if(proof) return { proof, args };
     else {
-      toast.error('Device Memory is exhausted, please reload.');
-      return;
+      setRunning(false);
+      alert('Device Memory is exhausted, please reload.');
+      window.location.reload();
     }
   }
 
+  const checkProvingKey = () => {
+    return true;
+    if(provingKey === '') {
+      toast.error('Downloading Zk proving key, please keep local cache avaialbe')
+      return false;
+    } return true;
+  }
+
   const withdraw = async () => {
-    if(!inputValidate()) return;
-    
+    if(!inputValidate() || !checkProvingKey()) return;
     if(!callRelayer) {
       // Operate from local
       setRunning(true);
       const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
       const { proof, args } = await getWithdrawProof(deposit, recipient, 0, toWeiString(withdrawAmount, decimals));
+      if(proof === undefined || proof === false) return
 
       args.push(deposit.commitmentHex);
       const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
@@ -222,6 +247,8 @@ export default function Withdraw(props) {
                             toWeiString(body.totalFee, decimals), 
                             toWeiString(withdrawAmount, decimals)
                           );
+                          if(proof === undefined || proof === false) return
+
                           const params = {
                             proof, 
                             args,
@@ -288,7 +315,7 @@ export default function Withdraw(props) {
   const endorse = async (currentNote) => {
     noteCopied = false;
     // console.log("背书开始", endorseAddress, endorseAmount, endorseEffectiveTime);
-    if(!endorseInputValidate()) return;
+    if(!endorseInputValidate() || !checkProvingKey()) return;
 
     const withdrawAddr = endorseOrderStatus === 1 ? endorseAddress : accounts[0];
     setEndorsing(true);
@@ -506,12 +533,16 @@ export default function Withdraw(props) {
         </div>
         {supportWebAssembly ?
         <div>
-          {/* {!showContent ? "":
-          <div className="save-note-button" onClick={saveNotes}><FontAwesomeIcon icon={faBookmark}/>  Save Notes</div>
-          } */}
+          {loadingDisplay === "block" ? 
+          <div>
+            <div className="loading">
+              <FontAwesomeIcon icon={faSpinner} spin/> Downloading Zero-knowledge proving key file ({loadingPercentage})
+            </div>
+          </div> : 
+          <div>
           <div className="font1">Paste your cheque note {loading ? <FontAwesomeIcon icon={faSpinner} spin/> : ''}</div>
           <textarea className="recipient-input" onChange={(e) => handleInput(e.target.value)} value={hiddenNote}></textarea>
-
+          </div> }
 
           {!showContent ? '':
           <div>
@@ -660,6 +691,7 @@ export default function Withdraw(props) {
         <div className="loading"><FontAwesomeIcon icon={faFrown}/> This device don't have enough memory   for WebAssembly to calculate circuit, please use Desktop Browser such as Chrome or Firefox.
         </div>
         }
+        <div className="loading-bar" style={{width: loadingPercentage, display: loadingDisplay}}></div>
         </div>
         :
         <div>

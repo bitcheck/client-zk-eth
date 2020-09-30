@@ -445,3 +445,16 @@ body {
   color: white;
   margin-bottom: 5px;
 }
+.loading-bar {
+  position: fixed;
+  top: 0;
+  height: 2px;
+  background-color: #50BF3E;
+  width: 0%;
+}
+.loading-percentage {
+  position: fixed;
+  top: 5px;
+  right: 10px;
+  color: #50BF3E;
+}
