@@ -6,13 +6,13 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {callRelayer, relayerURLs, decimals, simpleVersion, notePrefix } from "../config.js";
 import {getNoteDetails, toWeiString, formatAmount, getNoteShortString, formatAccount, getGasPrice, validateAddress, connect} from "../utils/web3.js";
-import {parseNote, generateProof} from "../utils/zksnark.js";
+import {parseNote, generateProof, createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import {saveNoteString, eraseNoteString} from "../utils/localstorage.js";
 import DateTimePicker from 'react-datetime-picker';
-import {createDeposit, toHex, rbigint} from "../utils/zksnark.js";
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import { confirmAlert } from 'react-confirm-alert'; // Import
 import * as request from 'request';
+import {myEvent} from '../utils/event.js';
 const axios = require('axios');
 
 export default function Withdraw(props) {
@@ -39,6 +39,7 @@ export default function Withdraw(props) {
   const [shaker, setShaker] = useState();
   const [loadingPercentage, setLoadingPercentage] = useState("0%");
   const [loadingDisplay, setLoadingDisplay] = useState('block');
+  const [generateStatus, setGenerateStatus] = useState('Withdraw');
 
   const [endorseEffectiveTimeStatus, setEndorseEffectiveTimeStatus] = useState(0);
   const [endorseEffectiveTime, setEndorseEffectiveTime] = useState(parseInt((new Date()).valueOf() / 1000));
@@ -128,6 +129,12 @@ export default function Withdraw(props) {
 
   const getWithdrawProof = async (deposit, recipient, fee, amount) => {
     // fee, amount must be wei or with decimal string
+    myEvent.on('GENERATE_PROOF', function(data) {
+      setGenerateStatus(data.message);
+      if(data.step === 'done') {
+        myEvent.removeAllListeners();
+      }
+    })
     const { proof, args } = await generateProof({ 
       deposit, 
       recipient, 
@@ -141,23 +148,17 @@ export default function Withdraw(props) {
     if(proof) return { proof, args };
     else {
       setRunning(false);
+      setGenerateStatus('Withdraw');
       alert('Device Memory is exhausted, please reload.');
       window.location.reload();
     }
   }
 
-  const checkProvingKey = () => {
-    return true;
-    if(provingKey === '') {
-      toast.error('Downloading Zk proving key, please keep local cache avaialbe')
-      return false;
-    } return true;
-  }
-
   const withdraw = async () => {
-    if(!inputValidate() || !checkProvingKey()) return;
+    if(!inputValidate()) return;
     if(!callRelayer) {
       // Operate from local
+      // ######
       setRunning(true);
       const { deposit } = parseNote(note) //从NOTE中解析金额/币种/网络/证明
       const { proof, args } = await getWithdrawProof(deposit, recipient, 0, toWeiString(withdrawAmount, decimals));
@@ -165,14 +166,16 @@ export default function Withdraw(props) {
 
       args.push(deposit.commitmentHex);
       const gas = await shaker.methods.withdraw(proof, ...args).estimateGas( { from: accounts[0], gas: 10e6});
-      // console.log("Estimate GAS", gas);
+      console.log("Estimate GAS", gas);
       try {
         await shaker.methods.withdraw(proof, ...args).send({ from: accounts[0], gas: parseInt(gas * 1.1) });
         await onNoteChange();
         setRunning(false);
+        setGenerateStatus('Withdraw');
       } catch (err) {
         toast.error("#" + err.code + ", " + err.message);
         setRunning(false);
+        setGenerateStatus('Withdraw');
       }  
     } else {
       // Get estimate fee from relayer
@@ -277,6 +280,7 @@ export default function Withdraw(props) {
                                 toast.success(body.msg);
                                 // if(orderStatus === 0) setRecipient('');
                                 setRunning(false);
+                                setGenerateStatus('Withdraw');
                               } else {
                                 toast.warning(body.msg);
                                 // console.log(body)
@@ -284,15 +288,18 @@ export default function Withdraw(props) {
                             })
                           } catch (err) {
                             setRunning(false)
+                            setGenerateStatus('Withdraw');
                           }
                           
                           onClose();
                           setRunning(false);
+                          setGenerateStatus('Withdraw');
                         }}>Continue</button>
                       <button className="cancel-button"
                         onClick={() => {
                           onClose();
                           setRunning(false);
+                          setGenerateStatus('Withdraw');
                         }}
                       >
                         Cancel
@@ -304,10 +311,12 @@ export default function Withdraw(props) {
 
             } else {
               setRunning(false)
+              setGenerateStatus('Withdraw');
             }
         }); 
       } catch (err) {
         setRunning(false)
+        setGenerateStatus('Withdraw');
       }
     }
   }
@@ -315,7 +324,7 @@ export default function Withdraw(props) {
   const endorse = async (currentNote) => {
     noteCopied = false;
     // console.log("背书开始", endorseAddress, endorseAmount, endorseEffectiveTime);
-    if(!endorseInputValidate() || !checkProvingKey()) return;
+    if(!endorseInputValidate()) return;
 
     const withdrawAddr = endorseOrderStatus === 1 ? endorseAddress : accounts[0];
     setEndorsing(true);
@@ -600,7 +609,7 @@ export default function Withdraw(props) {
             {balance > 0 && withdrawAmount <= balance && !loading && withdrawAmount > 0 && intValidate(withdrawAmount) && recipient !== '' ?
             running ? 
             <div className="button-deposit unavailable">
-              <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Withdraw
+              <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;{generateStatus}
               {/* <div className="memo">After submiting transaction, you can check the wallet to see the result.</div> */}
             </div> :
             <div className="button-deposit" onClick={withdraw}>

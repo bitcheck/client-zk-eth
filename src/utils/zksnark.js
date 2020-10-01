@@ -2,10 +2,12 @@ import {merkleTreeHeight, erc20ShakerVersion} from "../config.js";
 import merkleTree from "../lib/MerkleTree.js";
 import buildGroth16 from "../lib/groth16_browser";
 import snarkjs from 'snarkjs';
+import {myEvent, websnarkEvent} from './event.js';
 const circomlib = require('circomlib')
 const circuit = require('../circuits/withdraw.json')
 const crypto = require('crypto')
-const websnarkUtils = require('websnark/src/utils')
+// const websnarkUtils = require('websnark/src/utils')
+const websnarkUtils = require('../lib/websnarkUtils.js')
 const assert = require('assert')
 
 const bigInt = snarkjs.bigInt
@@ -100,9 +102,24 @@ export async function generateProof({ deposit, recipient, relayerAddress = 0, fe
   let proof;
   try {
     console.time('Proof time')
+    myEvent.emit('GENERATE_PROOF', {message: 'Building Groth16...'})
     const groth16 = await buildGroth16();
-    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
+    myEvent.emit('GENERATE_PROOF', {message: 'Generate Witness...'});
+
+    
+    const witnessData = websnarkUtils.genWitness(input, circuit);
+    myEvent.emit('GENERATE_PROOF', {message: 'Convert Witness...'});
+    const witnessBin = websnarkUtils.convertWitness(witnessData.witness);
+    myEvent.emit('GENERATE_PROOF', {message: 'Generate Proving...'});
+    const proofData = await groth16.proof(witnessBin, proving_key);
+    myEvent.emit('GENERATE_PROOF', {message: 'Changing Signals...'})
+    proofData.publicSignals = websnarkUtils.stringifyBigInts2(witnessData.publicSignals);
+    // const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
+
+
+    myEvent.emit('GENERATE_PROOF', {message: 'Changing to solidity input...'})
     proof = websnarkUtils.toSolidityInput(proofData).proof;
+    myEvent.emit('GENERATE_PROOF', {step: 'done', message: 'Start signing...'});
     console.timeEnd('Proof time')  
   } catch (err) {
     return { proof: false, args: false };

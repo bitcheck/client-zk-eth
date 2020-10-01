@@ -92,4 +92,9 @@
 * Bug修改：Deposit之后，在网络未确认前，切换到列表，会将缓存中的记录删除，从而在本地无法找到note
 * 支持动态切换不同网络
 * Note的prefix改为可配置模式
+* 将fetch改为axios，withdraw_proving_key下载进度条
+* 对于webassembly的内存不够用的问题更敏感的提示
 
+### 2020-10-1
+### 0.10.16
+* 提现时，提示进度

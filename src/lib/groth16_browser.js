@@ -339,7 +339,6 @@ class Groth16 {
         const beta2 = pkey.slice(10*4 + 192, 10*4 + 320);
         const delta2 = pkey.slice(10*4 + 320, 10*4 + 448);
 
-
         const pH = this.calcH(signals.slice(0), polsA, polsB, nSignals, domainSize).then( (h) => {
             return this.g1_multiexp(h, pointsHExps);
         });
@@ -367,7 +366,6 @@ class Groth16 {
         const pDelta1 = this.loadPoint1(delta1);
         const pBeta2 = this.loadPoint2(beta2);
         const pDelta2 = this.loadPoint2(delta2);
-
 
         let rnd = new Uint32Array(8);
 
@@ -426,7 +424,7 @@ class Groth16 {
         this.instance.exports.g1_fromMontgomery(pi_a, pi_a);
         this.instance.exports.g2_fromMontgomery(pi_b, pi_b);
         this.instance.exports.g1_fromMontgomery(pi_c, pi_c);
-
+        
         return {
             pi_a: this.bin2g1(this.getBin(pi_a, 96)),
             pi_b: this.bin2g2(this.getBin(pi_b, 192)),
