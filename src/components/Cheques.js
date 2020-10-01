@@ -82,7 +82,7 @@ export default function Cheques(props) {
       // 排序
       depositArray = depositArray.sort(compareDescSort('timestamp'));
       setCheques(depositArray);
-      getExportCheques();
+      getExportCheques(noteKeys, noteArray);
     }
   }
 
@@ -178,8 +178,7 @@ export default function Cheques(props) {
   const onImportChequesChange = (notes) => {
     if(notes !== "") importNotes = notes;
   }
-  const getExportCheques = () => {
-    const [noteKeys, noteArray] = getNoteStrings(accounts[0], netId, type, notePrefix);
+  const getExportCheques = (noteKeys, noteArray) => {
     let re = [];
     for(let i = 0; i < noteKeys.length; i++) {
       re.push(noteKeys[i] + ":" + noteArray[i]);

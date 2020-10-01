@@ -40,13 +40,12 @@ export default function Withdraw(props) {
   const [loadingPercentage, setLoadingPercentage] = useState("0%");
   const [loadingDisplay, setLoadingDisplay] = useState('block');
   const [generateStatus, setGenerateStatus] = useState('Withdraw');
+  const [generateStatusTransfer, setGenerateStatusTransfer] = useState('Transferring');
 
   const [endorseEffectiveTimeStatus, setEndorseEffectiveTimeStatus] = useState(0);
   const [endorseEffectiveTime, setEndorseEffectiveTime] = useState(parseInt((new Date()).valueOf() / 1000));
   const [endorseOrderStatus, setEndorseOrderStatus] = useState(0);//0- 无记名支票，1- 记名支票
-  // const [endorseAmountStatus, setEndorseAmountStatus] = useState(0);
   const [endorseAmount, setEndorseAmount] = useState(0);
-  // const [endorseAddressStatus, setEndorseAddressStatus] = useState(0);
   const [endorseAddress, setEndorseAddress] = useState('');
   const [endorseUI, setEndorseUI] = useState(false);
 
@@ -131,6 +130,7 @@ export default function Withdraw(props) {
     // fee, amount must be wei or with decimal string
     myEvent.on('GENERATE_PROOF', function(data) {
       setGenerateStatus(data.message);
+      setGenerateStatusTransfer(data.message);
       if(data.step === 'done') {
         myEvent.removeAllListeners();
       }
@@ -149,6 +149,7 @@ export default function Withdraw(props) {
     else {
       setRunning(false);
       setGenerateStatus('Withdraw');
+      setGenerateStatusTransfer('Transferring');
       alert('Device Memory is exhausted, please reload.');
       window.location.reload();
     }
@@ -172,10 +173,12 @@ export default function Withdraw(props) {
         await onNoteChange();
         setRunning(false);
         setGenerateStatus('Withdraw');
+        setGenerateStatusTransfer('Transferring');
       } catch (err) {
         toast.error("#" + err.code + ", " + err.message);
         setRunning(false);
         setGenerateStatus('Withdraw');
+        setGenerateStatusTransfer('Transferring');
       }  
     } else {
       // Get estimate fee from relayer
@@ -281,6 +284,7 @@ export default function Withdraw(props) {
                                 // if(orderStatus === 0) setRecipient('');
                                 setRunning(false);
                                 setGenerateStatus('Withdraw');
+                                setGenerateStatusTransfer('Transferring');
                               } else {
                                 toast.warning(body.msg);
                                 // console.log(body)
@@ -289,17 +293,20 @@ export default function Withdraw(props) {
                           } catch (err) {
                             setRunning(false)
                             setGenerateStatus('Withdraw');
+                            setGenerateStatusTransfer('Transferring');
                           }
                           
                           onClose();
                           setRunning(false);
                           setGenerateStatus('Withdraw');
+                          setGenerateStatusTransfer('Transferring');
                         }}>Continue</button>
                       <button className="cancel-button"
                         onClick={() => {
                           onClose();
                           setRunning(false);
                           setGenerateStatus('Withdraw');
+                          setGenerateStatusTransfer('Transferring');
                         }}
                       >
                         Cancel
@@ -312,11 +319,13 @@ export default function Withdraw(props) {
             } else {
               setRunning(false)
               setGenerateStatus('Withdraw');
+              setGenerateStatusTransfer('Transferring');
             }
         }); 
       } catch (err) {
         setRunning(false)
         setGenerateStatus('Withdraw');
+        setGenerateStatusTransfer('Transferring');
       }
     }
   }
@@ -680,7 +689,7 @@ export default function Withdraw(props) {
               {balance > 0 && endorseAmount <= balance && !loading && endorseAmount > 0 && intValidate(endorseAmount) ?
               endorsing ? 
               <div className="button-deposit unavailable">
-                <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;Transferring
+                <FontAwesomeIcon icon={faSpinner} spin/>&nbsp;{generateStatusTransfer}
                 <div className="memo">After submiting transaction, you can check the wallet to see the result.</div>
               </div> :
               <div className="button-deposit" onClick={() => endorse(note)}>
