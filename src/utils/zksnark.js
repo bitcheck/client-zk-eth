@@ -7,7 +7,6 @@ const circomlib = require('circomlib')
 const circuit = require('../circuits/withdraw.json')
 const crypto = require('crypto')
 const websnarkUtils = require('websnark/src/utils')
-// const websnarkUtils = require('../lib/websnarkUtils.js')
 const assert = require('assert')
 
 const bigInt = snarkjs.bigInt
